@@ -35,7 +35,6 @@ A: No, only the external images.
 
 == Screenshots ==
 
-1. /new-post.jpg
+1. /screenshot-1.jpg
 
-2. /setting.jpg
-
+2. /screenshot-2.jpg
