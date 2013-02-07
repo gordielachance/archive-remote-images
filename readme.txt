@@ -1,20 +1,20 @@
 === Archive Remote Images ===
-Contributors: kasonzhao
+Contributors: Kasonzhao
 Donate link: 
-Tags: Archive Remote Images, image archive
+Tags: Archive Remote Images, image archive, Cache Images, auto save images.
 Requires at least: 3.0
-Tested up to: 3.5
-Stable tag: 1.0.1
+Tested up to: 3.5.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Archive images from remote website base on url from content, automatic cache images when save content, customize setting separately.
+Advanced remote images grabber, automatically save the remote img to local, saves them directly into your blog media directory and attaches to the appointed post.
 
 == Description ==
 
-Archive images from remote website base on url, automatic archive images when save post/page, able to customize setting for each post.
-
-Just simple setting, it will help you transfer the image from remote website into your local, you can choose for single preference, if some post need not transfer the images
+Advanced remote images grabber, automatically save the remote picture to the local, saves them directly into your blog media directory, and attaches to the appointed post.
+Totaly auto save image in your post/page content. 
+Just simple setting, it will help you transfer the image from remote website into your local, you can choose for single preference, if some post need not transfer the images. inspired from Cache Images.
 
 
 Check out the detail of thus plugin "<a href="http://www.runinweb.com/projects/archive-remote-images/" target="_blank">Archive Remote Images</a>" .
