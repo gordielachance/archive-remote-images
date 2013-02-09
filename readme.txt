@@ -38,3 +38,9 @@ A: No, only the external images.
 1. /screenshot-1.jpg
 
 2. /screenshot-2.jpg
+
+== Changelog ==
+
+
+=  1.0.2 =
+* 	Bug fix : Fix the default value and auto save option
