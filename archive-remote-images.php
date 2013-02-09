@@ -3,7 +3,7 @@
 Plugin Name: Archive Remote Images
 Plugin URI: http://www.runinweb.com/projects/archive-remote-images/
 Description: Archive images from remote website base on url, automatic cache images when save, customize setting for each post.
-Version: 1.0.2
+Version: 1.0.3
 Author: Kason Zhao
 Author URI: http://www.runinweb.com/projects/archive-remote-images/
 */
