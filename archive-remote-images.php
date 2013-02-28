@@ -1,11 +1,11 @@
 <?php
 /*
 Plugin Name: Archive Remote Images
-Plugin URI: http://www.runinweb.com/projects/archive-remote-images/
+Plugin URI: http://www.lookingimage.com/wordpress-plugin/
 Description: Archive images from remote website base on url, automatic cache images when save, customize setting for each post.
 Version: 1.0.3
 Author: Kason Zhao
-Author URI: http://www.runinweb.com/projects/archive-remote-images/
+Author URI: http://www.lookingimage.com/wordpress-plugin/
 */
 // Archive Remote Images -> ari
 // after install will update the values

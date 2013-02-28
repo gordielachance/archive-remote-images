@@ -17,7 +17,7 @@ Totaly auto save image in your post/page content.
 Just simple setting, it will help you transfer the image from remote website into your local, you can choose for single preference, if some post need not transfer the images. inspired from Cache Images.
 
 
-Check out the detail of thus plugin "<a href="http://www.runinweb.com/projects/archive-remote-images/" target="_blank">Archive Remote Images</a>" .
+Check out the detail of thus plugin "<a href="http://www.lookingimage.com/wordpress-plugin/" target="_blank">Archive Remote Images</a>" .
 
 == Installation ==
 
