@@ -121,7 +121,7 @@ float:right;
    <li><a href="http://www.lookingimage.com/forums/discussion/" target="_blank">Support forum</a></li>
    <li><a href="http://lookingimage.com/" target="_blank">Author home page</a></li>
    <li><a href="http://www.lookingimage.com/wordpress-themes/" target="_blank">Free WordPress themes</a></li>
-   <li><a href="http://www.lookingimage.com/wordpress-plugin/" target="_blank">Other pulgins from lookingimage.com</a></li>
+   <li><a href="http://www.lookingimage.com/wordpress-plugin/" target="_blank">Other plugins from lookingimage.com</a></li>
    </ul>
 
 	<form id="option-form" method="post" name="option-form">
