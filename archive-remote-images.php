@@ -114,7 +114,15 @@ float:right;
 <div class="main-form">
 <div class="ari-leftbar">
   <p>Archive images from remote website base on url, automatic archive images when save post/page, able to customize setting for each post.</p>
-  <p>Please visit <a href="http://www.runinweb.com/projects/archive-remote-images/" target="_blank" >Archive Remote Images - RunInWeb.com</a> for guidance/questions/news, enjoy!</p>
+  <p>Following links can help you:</p>
+   
+   <ul style="margin-left:40px;"> 
+   <li><a href="http://www.lookingimage.com/wordpress-plugin/wordpress-archive-remote-images/" target="_blank">Plugin details (FAQ .etc)</a></li>
+   <li><a href="http://www.lookingimage.com/forums/discussion/" target="_blank">Support forum</a></li>
+   <li><a href="http://lookingimage.com/" target="_blank">Author home page</a></li>
+   <li><a href="http://www.lookingimage.com/wordpress-themes/" target="_blank">Free WordPress themes</a></li>
+   <li><a href="http://www.lookingimage.com/wordpress-plugin/" target="_blank">Other pulgins from lookingimage.com</a></li>
+   </ul>
 
 	<form id="option-form" method="post" name="option-form">
 		<table id="aws-option-table" class="ari-table">
@@ -143,7 +151,7 @@ float:right;
 </div>
 
 <div class="ari-rightbar">
-<iframe width="300" height="400" frameborder="1" src="http://www.runinweb.com/news.html"></iframe>
+<iframe width="300" height="530" frameborder="1" src="http://www.runinweb.com/news.html"></iframe>
 <div style="clear:both;"></div>
 </div>
 </div>
