@@ -16,8 +16,16 @@ Advanced remote images grabber, automatically save the remote picture to the loc
 Totaly auto save image in your post/page content. 
 Just simple setting, it will help you transfer the image from remote website into your local, you can choose for single preference, if some post need not transfer the images. inspired from Cache Images.
 
+Following links can help you:  
+   <ul style="margin-left:40px;"> 
+   <li><a href="http://www.lookingimage.com/wordpress-plugin/wordpress-archive-remote-images/" target="_blank">Plugin details (FAQ .etc)</a></li>
+   <li><a href="http://www.lookingimage.com/forums/discussion/" target="_blank">Support forum</a></li>
+   <li><a href="http://lookingimage.com/" target="_blank">Author home page</a></li>
+   <li><a href="http://www.lookingimage.com/wordpress-themes/" target="_blank">Free WordPress themes</a></li>
+   <li><a href="http://www.lookingimage.com/wordpress-plugin/" target="_blank">Other pulgins from lookingimage.com</a></li>
+   </ul>
 
-Check out the detail of thus plugin "<a href="http://www.lookingimage.com/wordpress-plugin/" target="_blank">Archive Remote Images</a>" .
+
 
 == Installation ==
 
