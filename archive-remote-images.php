@@ -444,6 +444,7 @@ class ArchiveRemoteImage{
 
                 }
                 
+                //TO FIX : remove doctype, html and body tags.
                 $post_content =  $doc->saveHTML();
 
             }
