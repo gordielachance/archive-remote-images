@@ -141,7 +141,7 @@ class ArchiveRemoteImage{
     ////
         
     public function scripts_styles() {
-            wp_enqueue_style( 'ari-admin', $this->plugin_url .'_inc/css/ari-admin.css', array(), $this->version );
+            //wp_enqueue_style( 'ari-admin', $this->plugin_url .'_inc/css/ari-admin.css', array(), $this->version );
     }
     
     /**
