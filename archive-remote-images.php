@@ -209,11 +209,9 @@ class ArchiveRemoteImage{
     }
     
     // retrieve images from content
-    function archive_find_images($content){
+    function fetch_all_images($doc){
         $save_atts = array('src','alt','title');
         $images = array();
-        $doc = new DOMDocument(); 
-        $doc -> loadHTML($content); 
         $out = simplexml_import_dom($doc); 
         $img_el_all = $out -> xpath('//img'); 
 
@@ -259,23 +257,37 @@ class ArchiveRemoteImage{
  
         //checkbox not checked
         if (!isset($_POST['transfer_image'])) return $post_id;
+        
+        set_time_limit(120);
+        
+        //load HTML for the parser
+        libxml_use_internal_errors(true); //avoid errors like duplicate IDs
+
+        
+        $doc = new DOMDocument();
+        
+        //try to fix bad HTML
+        $doc->recover = true; 
+        //$doc->strictErrorChecking = false;
+        
+        $doc->loadHTML($post->post_content);
 
         //get images urls in post content
-        $images = self::archive_find_images($post->post_content);
-
-        foreach ($images as $image){
-            $post->post_content = self::content_replace_remote_image($image, $post);
-        }
-        
+        $images = self::fetch_all_images($doc);
         
         //remove hooks (avoid infinite loops)
         remove_action('save_post', array( $this, 'save_post_metadata' ));
         remove_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
         
-        //update post
-        $post->post_content = apply_filters('ari_get_replaced_post_content',$post->post_content,$post);
-        wp_update_post( $post );
-        
+        foreach ($images as $image){
+            $post->post_content = self::replace_single_image($image, $post, $doc);
+            
+            //update post
+            //is inside FOREACH so if the script breaks, 
+            //successfully grabbed images still are replaced in the post content.
+            wp_update_post( $post ); 
+        }
+
         //re-hooks
         add_action('save_post', array( $this, 'save_post_metadata' ));
         add_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
@@ -364,7 +376,7 @@ class ArchiveRemoteImage{
     /**
      * Archive image from content
      */
-    function content_replace_remote_image($image, $post){
+    function replace_single_image($image, $post, $doc){
         global $wpdb;
         
         $post_content = $post->post_content;
@@ -388,14 +400,13 @@ class ArchiveRemoteImage{
                 //get image title
                 $img_title = self::get_image_title($image);
 
-                set_time_limit(300);
                 $upload = media_sideload_image($url, $post->ID, $img_title);
                 if (!is_wp_error($upload)){
                     $attachment_id = self::retrieve_sideload_upload_id($upload);
                 }
             }
 
-            if ($attachment_id){
+            if (isset($attachment_id)){
                 $new_image_html = wp_get_attachment_image( $attachment_id, 'full' );
                 $new_image_html = apply_filters('ari_get_new_image_html',$new_image_html,$attachment_id);
                 $new_image_url = wp_get_attachment_url( $attachment_id );
@@ -404,8 +415,6 @@ class ArchiveRemoteImage{
                 add_post_meta($attachment_id, '_ari-url',$url);
 
                 //replace image in content
-                $doc = new DOMDocument();
-                $doc->loadHTML($post_content);
                 $imageTags = $doc->getElementsByTagName('img');
 
                 $new_image_el = $doc->createDocumentFragment();
