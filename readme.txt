@@ -50,6 +50,7 @@ A: No, only the external images.
 == Changelog ==
 
 =  1.0.4 =
+*   If the remote image is wrapped into a link pointing to the same remote file, replace that link.
 *   Cleaned settings page (uses now Wordpress functions); and moved under the >Media section.
 *   Saves image title if a "title" or "alt" attribute is set on the remote image
 *   Fixed bug with revisions

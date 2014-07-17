@@ -28,8 +28,9 @@ class AriSettings{
     
     public function get_default_settings(){
         $default = array(
-            'default_checked'   => "on",
-            'post_types'        => self::option_post_type_allowed()
+            'default_checked'       => false,
+            'post_types'            => self::option_post_type_allowed(),
+            'replace_parent_link'   => true
         );
         return $default;
     }
@@ -122,7 +123,16 @@ class AriSettings{
             array( $this, 'default_checked_callback' ), 
             'ari-setting-admin', 
             'settings_general'
-        );      
+        );     
+        
+        add_settings_field(
+            'replace_parent_link', 
+            __('Replace parent link','ari'), 
+            array( $this, 'replace_parent_link_callback' ), 
+            'ari-setting-admin', 
+            'settings_general'
+        );   
+        
     }
 
     /**
@@ -145,10 +155,16 @@ class AriSettings{
         //default checked
         if( isset( $input['default_checked'] ) )
             $new_input['default_checked'] = (bool)( $input['default_checked'] );
+        
+        //parent link
+        if( isset( $input['replace_parent_link'] ) )
+            $new_input['replace_parent_link'] = (bool)( $input['replace_parent_link'] );
+        
 
         $new_input = array_filter($new_input);
         
         return $new_input;
+       
     }
 
     /** 
@@ -212,4 +228,19 @@ class AriSettings{
             $checked
         );
     }
+    
+    public function replace_parent_link_callback(){
+        
+        $option = ari()->get_setting('replace_parent_link');
+
+        $checked = checked( (bool)$option, true, false );
+                
+        printf(
+            '<input type="checkbox" name="%1s[replace_parent_link]" value="on" %2s/> %3s',
+            $this->option_name,
+            $checked,
+            __("If the remote image is wrapped into a link pointing to the same remote file, replace that link.","ari")
+        );
+    }
+    
 }

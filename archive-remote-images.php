@@ -396,9 +396,10 @@ class ArchiveRemoteImage{
             }
 
             if ($attachment_id){
-                $attachment_html = wp_get_attachment_image( $attachment_id, 'full' );
-                $attachment_html = apply_filters('ari_get_attachment_html',$attachment_html,$attachment_id);
-
+                $new_image_html = wp_get_attachment_image( $attachment_id, 'full' );
+                $new_image_html = apply_filters('ari_get_new_image_html',$new_image_html,$attachment_id);
+                $new_image_url = wp_get_attachment_url( $attachment_id );
+                
                 //add original URL to attachment, as meta
                 add_post_meta($attachment_id, '_ari-url',$url);
 
@@ -407,23 +408,44 @@ class ArchiveRemoteImage{
                 $doc->loadHTML($post_content);
                 $imageTags = $doc->getElementsByTagName('img');
 
-                $frag = $doc->createDocumentFragment();
-                $frag->appendXML($attachment_html);
+                $new_image_el = $doc->createDocumentFragment();
+                $new_image_el->appendXML($new_image_html);
 
                 foreach ($imageTags as $imageTag){
                     $imageTag_url = $imageTag->getAttribute('src');
                     if ($imageTag_url != $url) continue;
+                    
+                    $parentNode = $imageTag->parentNode;
 
+                    //replace <img> tag
+                    $parentNode->replaceChild($new_image_el, $imageTag);
+                    
+                    //if the parent tag of the image is a link to the (same) image,
+                    //replace that link with a link to the uploaded image.
+                    if (($parentNode->tagName == 'a') && (self::get_setting('replace_parent_link'))){
 
-                    $imageTag->parentNode->replaceChild($frag, $imageTag);
+                        $link_src = $parentNode->getAttribute('href');
+                        
+                        //url and image are the same
+                        if ($link_src == $url){
+                            $new_image_html = wp_get_attachment_image( $attachment_id, 'medium' );
+                            $new_link_html = '<a href="'.$new_image_url.'">'.$new_image_html.'</a>';
+                            $new_link_html = apply_filters('ari_get_new_link_html',$new_link_html,$attachment_id);
+                            
+                            $new_link_el = $doc->createDocumentFragment();
+                            $new_link_el->appendXML($new_link_html);
+                            
+                            $parentNode->parentNode->replaceChild($new_link_el, $parentNode);
+                            
+                        }
+                        
 
+                    }
 
                 }
-
-                # remove <html><body></body></html> 
-                //TO FIX
                 
                 $post_content =  $doc->saveHTML();
+
             }
 
         }
