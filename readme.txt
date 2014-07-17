@@ -50,6 +50,7 @@ A: No, only the external images.
 == Changelog ==
 
 =  1.0.4 =
+*   Cleaned settings page (uses now Wordpress functions); and moved under the >Media section.
 *   Saves image title if a "title" or "alt" attribute is set on the remote image
 *   Fixed bug with revisions
 *   Avoid uploading several times the same image (checking its source, which is saved as "_ari-url" post meta)
