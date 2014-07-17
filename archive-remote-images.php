@@ -1,302 +1,558 @@
 <?php
 /*
-Plugin Name: Archive Remote Images
-Plugin URI: http://www.runinweb.com/projects/archive-remote-images/
-Description: Archive images from remote website base on url, automatic cache images when save, customize setting for each post.
-Version: 1.0.3
-Author: Kason Zhao
-Author URI: http://www.runinweb.com/projects/archive-remote-images/
-*/
-// Archive Remote Images -> ari
-// after install will update the values
-register_activation_hook(__FILE__, 'ari_install');
-function ari_install()
-{
-    update_option('ari_overall_swich', 'on');
-    update_option('ari_default_setting', 'on');
-    update_option('ari_display_box', 'on');
-    update_option('ari_archive_autosave', '');
-}
-/*Call 'LZ_option_link' function to Add a submenu link under Profile tab.*/
-add_action('admin_menu', 'archive_remote_images_option_link');
-/**
- * Function Name: archive_remote_images_option_link
- * Description: Add a submenu under Settings tab.
- *
+ * Plugin Name: Archive Remote Image
+ * Plugin URI: https://wordpress.org/plugins/archive-remote-images
+ * Description: Advanced remote images grabber, automatically save the remote img to local, saves them directly into your blog media directory and attaches to the app
+ * Author: Kason Zhao, G.Breant
+ * Version: 1.0.4
+ * Author URI: https://profiles.wordpress.org/kasonzhao/
+ * License: GPL2+
+ * Text Domain: ari
+ * Domain Path: /languages/
  */
-function archive_remote_images_option_link()
-{
-    add_options_page('Archive Remote Images', 'Archive Remote Images', 'manage_options', 'archive-remote-images', 'archive_remote_images_option_form');
-}
-function archive_remote_images_option_form()
-{
-    $ari_path = plugin_dir_url(__FILE__);
-    echo '<h2><img style="vertical-align: bottom;"  width="20px" src=' . $ari_path . '/images/options.png /> General option  </h2> ';
+
+
+class ArchiveRemoteImage{
+    /** Version ***************************************************************/
+
     /**
-     * Check whether the form submitted or not.
+     * @public string plugin version
      */
-    if (isset($_POST['option-save'])) {
-        echo "<div class='update-nag'>Options saved!</div>";
-        update_option('ari_overall_swich', trim($_POST['ari_overall_swich']));
-        update_option('ari_default_setting', trim($_POST['ari_default_setting']));
-        update_option('ari_display_box', trim($_POST['ari_display_box']));
-        update_option('ari_archive_autosave', trim($_POST['ari_archive_autosave']));
+    public $version = '1.04';
+    public $db_version = '0104';
+
+    /** Paths *****************************************************************/
+
+    public $file = '';
+
+    /**
+     * @public string Basename of the plugin directory
+     */
+    public $basename = '';
+
+    /**
+     * @public string Prefix for the plugin
+     */
+    public $prefix = '';
+
+    /**
+     * @public string Absolute path to the plugin directory
+     */
+    public $plugin_dir = '';
+
+    /**
+     * @public string Absolute path to the plugin directory
+     */
+    public $plugin_url = '';
+
+    /**
+     * @var The one true Instance
+     */
+    private static $instance;
+
+    /**
+     * Main Instance
+     *
+     * Insures that only one instance of the plugin exists in memory at any one
+     * time. Also prevents needing to define globals all over the place.
+     *
+     * @staticvar array $instance
+     * @uses ukeGeeks::setup_globals() Setup the globals needed
+     * @uses ukeGeeks::includes() Include the required files
+     * @uses ukeGeeks::setup_actions() Setup the hooks and actions
+     * @see ukegeeks()
+     * @return The instance
+     */
+    public static function instance() {
+            if ( ! isset( self::$instance ) ) {
+                    self::$instance = new ArchiveRemoteImage;
+                    self::$instance->setup_globals();
+                    self::$instance->includes();
+                    self::$instance->setup_actions();
+            }
+            return self::$instance;
     }
-?>
-<style type="text/css">
-.main-form{
-min-width:1024px;
-}
-.ari-button {
-    display: inline-block;
-    background: #3079ed;
-    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#327BEF), color-stop(100%,#2E77EB));
-    background: -moz-linear-gradient(center top, #327BEF 0%, #2E77EB 100%);
-    -webkit-border-radius: 2px;
-    -moz-border-radius: 2px;
-    border-radius: 2px;
-    -webkit-transition: border-color .218s 0!important;
-    -moz-transition: border-color .218s 0!important;
-    -o-transition: border-color .218s 0!important;
-    transition: border-color .218s 0!important;
-    text-shadow: 1px 0px 0px #1a378e!important;
-    padding: 7px 12px;
-    margin: 0px 12px 0px 0px;
-    display: inline-block;
-    border-color: #0066cc!important;
-    border-width: 1px;
-    border-style: solid;
-    font-family: Helvetica, Arial, sans-serif;
-    font-size: 12px;
-    color: #ffffff!important;
-    font-weight: bold;
-}
-.ari-button:hover {
-    background: #2D71EE;
-    -webkit-box-shadow: 1px 1px #d8d8d8;
-    -moz-box-shadow: 1px 1px #d8d8d8;
-    box-shadow: 1px 1px #d8d8d8;
-    text-shadow: 1px 1px 0px #001AA6;
-    border-color: #291f93;
-}
-.ari-button:active {
-    background: #2A69EF;
-    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#327aef), color-stop(100%,#2e76eb));
-    background: -moz-linear-gradient(center top, #327aef 0%, #2e76eb 100%);
-    -webkit-box-shadow: 1px 1px 3px 0px #0066cc inset;
-    -moz-box-shadow: 1px 1px 3px 0px #0066cc inset;
-    box-shadow: 1px 1px 3px 0px #0066cc inset;
-    text-shadow: 1px 1px 0px #001AA6;
-    border-color: #444444;
-}
-.ari-table{
-padding:10px;
 
-}
+    /**
+     * A dummy constructor to prevent the plugin from being loaded more than once.
+     */
+    private function __construct() { /* Do nothing here */ }
 
 
-.ari-table td{
-padding:5px;
-width:350px;
-}
+    function setup_globals(){
+        global $wpdb;
 
-.ari-leftbar{
-width:60%;
-min-width:500px;
-float:left;
-}
-.ari-rightbar{
-margin-right:50px;
-width:300px;
-float:right;
-}
-</style>
-<div class="main-form">
-<div class="ari-leftbar">
-  <p>Archive images from remote website base on url, automatic archive images when save post/page, able to customize setting for each post.</p>
-  <p>Please visit <a href="http://www.runinweb.com/projects/archive-remote-images/" target="_blank" >Archive Remote Images - RunInWeb.com</a> for guidance/questions/news, enjoy!</p>
+        /** Paths *************************************************************/
+        $this->file       = __FILE__;
+        $this->basename   = plugin_basename( $this->file );
+        $this->prefix = 'ari';
+        $this->plugin_dir = plugin_dir_path( $this->file );
+        $this->plugin_url = plugin_dir_url ( $this->file );
 
-	<form id="option-form" method="post" name="option-form">
-		<table id="aws-option-table" class="ari-table">
-			<tr>
-				<td>Enable 'Archive Remote Images' overall switch: <a href="http://www.runinweb.com/projects/archive-remote-images/#overall" target="_blank">(help?)</a></td>
-				<td><input <?php if(get_option('ari_overall_swich') == "on") echo "checked=checked"; ?> type="checkbox" id="ari_overall_swich" name="ari_overall_swich" /></td>
-			</tr>
-			<tr>
-				<td>Auto archive when post saving as default setting:  <a href="http://www.runinweb.com/projects/archive-remote-images/#default_setting" target="_blank">(help?)</a></td>
-				<td><input <?php if(get_option('ari_default_setting') == "on") echo "checked=checked"; ?> type="checkbox" id="ari_default_setting" name="ari_default_setting" /></td>
-			</tr>
-		    <tr>
-				<td>Display Archive Remote Images option box in post page:  <a href="http://www.runinweb.com/projects/archive-remote-images/#Display_control" target="_blank">(help?)</a></td>
-				<td><input <?php if (get_option('ari_display_box') == "on") echo "checked=checked"; ?> type="checkbox" id="ari_display_box" name="ari_display_box" /></td>
-			</tr>
-			 <tr>
-				<td>Archive Remote Images for auto save:  <a href="http://www.runinweb.com/projects/archive-remote-images/#auto_save" target="_blank">(help?)</a></td>
-				<td><input <?php if(get_option('ari_archive_autosave') == "on") echo "checked=checked"; ?> type="checkbox" id="ari_archive_autosave" name="ari_archive_autosave" /></td>
-			</tr>
-			
-			<tr><td colspan="2"><br/><input id="option-save" class="ari-button" type="submit" name="option-save" value="Save options"/></td></tr>
-		</table>
-		
-		
-	</form>
-</div>
+        $default_options = array(
+            'overall_switch'     => "on",
+            'default_checked'   => "",
+            'display_box'       => "on",
+        );
 
-<div class="ari-rightbar">
-<iframe width="300" height="400" frameborder="1" src="http://www.runinweb.com/news.html"></iframe>
-<div style="clear:both;"></div>
-</div>
-</div>
+        $this->options = apply_filters('ari-options',$default_options);
 
- <?php
-}
-// add option to new/edit post page
-add_action('add_meta_boxes', 'archive_remote_images_meta_box');
-
-/**
-
-* This function registers a metabox with the callback archive_remote_images_meta_box_callback.
-
-* For reference: add_meta_box( $id, $title, $callback, $page, $context, $priority, $callback_args );
-
-*
-
-*/
-
-function archive_remote_images_meta_box()
-{
-    $post_types = get_post_types();
+    }
     
-    foreach ($post_types as $post_type)
-        if (get_option('ari_overall_swich') == 'on' and get_option('ari_display_box') == 'on')
-            add_meta_box('', 'Archive image option', 'archive_remote_images_meta_box_callback', $post_type, 'side', 'high');
-}
-?>
-<?php
-function archive_remote_images_meta_box_callback($post)
-{
-    $transfer_image_value = get_post_meta($post->ID, 'transfer_image', TRUE);
-    $check_one            = '';
-    
-    if ($transfer_image_value != 'yes' && $transfer_image_value != 'no') {
-        if (get_option('ari_default_setting') == "on") {
-            $check_one = 'checked="checked"';
-        } else {
-            $check_two = 'checked="checked"';
+    function includes(){
+    }
+
+    function setup_actions(){
+
+        //localization
+        add_action('init', array($this, 'load_plugin_textdomain'));
+
+        //upgrade
+        add_action( 'plugins_loaded', array($this, 'upgrade'));
+
+        //scripts & styles
+        add_action( 'admin_enqueue_scripts',  array( $this, 'scripts_styles' ) );
+
+        //register settings page
+        add_action('admin_menu',  array( $this, 'settings_page' ) );
+
+        //metabox
+        add_action( 'add_meta_boxes',  array( $this, 'metabox_init' ) );
+        add_action( 'save_post',  array( $this, 'save_post_metadata' ) );
+
+        //post processing
+        add_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
+
+    }
+
+    public function load_plugin_textdomain(){
+        load_plugin_textdomain($this->basename, FALSE, $this->plugin_dir.'/languages/');
+    }
+
+    function upgrade(){
+        global $wpdb;
+
+        $db_meta_name = "_ari_db_version";
+        $current_version = get_option($db_meta_name);
+
+        if ($current_version==$this->db_version) return false;
+
+        //install
+        if(!$current_version){
+            //handle SQL
+            //require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+            //dbDelta($sql);
+            add_option("_ari_options",$this->options); // add settings
         }
-    } else {
-        if ($transfer_image_value == 'yes') {
-            $check_one = 'checked="checked"';
-        } else {
-            $check_two = 'checked="checked"';
-        }
+
+        //upgrade
+        update_option($db_meta_name, $this->db_version );//upgrade DB version
     }
-?>
-<input type="hidden" name="transfer_image_noncename" id="transfer_image_noncename" value="<?php echo wp_create_nonce('transfer_image' . $post->ID); ?>" />	
-<div id="post-img-select">
-<p>Archive: &nbsp;
-<input type="radio"value="yes" <?php echo $check_one; ?> id="img-cache-yes-0" class="img-cache-yes" name="transfer_image"> <label for="img-cache-yes-0">Yes</label>
-<input type="radio" value="no" <?php echo $check_two; ?>  id="img-cache-yes-video" class="img-cache-yes" name="transfer_image"> <label for="img-cache-yes-video">No</label>
-	</p>	
-	</div>
-<?php
-}
-add_action('save_post', 'save_pst_metadata');
-function save_pst_metadata($post_id)
-{
-    // verify this came from the our screen and with proper authorization.
-    if (!wp_verify_nonce($_POST['transfer_image_noncename'], 'transfer_image' . $post_id)) {
-        return $post_id;
+
+    ////
+        
+    public function scripts_styles() {
+            wp_enqueue_style( 'ari-admin', $this->plugin_url .'_inc/css/ari-admin.css', array(), $this->version );
     }
-    // verify if this is an auto save routine. If it is our form has not been submitted, so we dont want to do anything
-    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)
-        return $post_id;
     
-    // Check permissions
-    if (!current_user_can('edit_post', $post_id))
-        return $post_id;
-    // OK, we're authenticated: we need to find and save the data  
-    $post = get_post($post_id);
-    update_post_meta($post_id, 'transfer_image', esc_attr($_POST['transfer_image']));
+    /**
+     * Description: Add a submenu under Settings tab.
+     *
+     */
+    function settings_page(){
+        add_options_page('Archive Remote Images', 'Archive Remote Images', 'manage_options', 'archive-remote-images', array( $this, 'settings_page_content' ));
+    }
     
-    return (esc_attr($_POST['transfer_image']));
-}
-?>
-<?php
-// checking img urls in content
-function archive_find_images($content, $domains)
-{
-    preg_match_all('|<img.*?src=[\'"](.*?)[\'"].*?>|i', $content, $matches);
-    foreach ($matches[1] as $url):
-        $url = parse_url($url);
-        $domains[$url['host']]++;
-    endforeach;
-    
-    return $domains;
-}
-/**
- * Archive image from content
- */
-function archive_image_from_remote($url, $postid)
-{
-    global $wpdb;
-    $orig_url = $url;
-    
-    if (strpos($url, 'blogspot.com') || strpos($url, 'blogger.com') || strpos($url, 'ggpht.com') || strpos($url, 'googleusercontent.com') || strpos($url, 'gstatic.com')) {
-        $response = wp_remote_request($url);
-        if (is_wp_error($response))
-            return 'error1';
-        
-        $my_body = wp_remote_retrieve_body($response);
-        
-        if (strpos($my_body, 'src')) {
-            preg_match_all('|<img.*?src=[\'"](.*?)[\'"].*?>|i', $my_body, $matches);
-            foreach ($matches[1] as $url):
-                $spisak = $url;
-            endforeach;
+    function settings_page_content(){
+        ?>
+        <h2><img style="vertical-align: bottom;"  width="20px" src="<?php echo $this->plugin_url;?>/_inc/images/options.png"/><?php _e('General options','ari');?></h2>
+        <?php
+        /**
+         * Check whether the form submitted or not.
+         */
+        if (isset($_POST['option-save'])) {
             
-            $url = $spisak;
+            $new_options = array();
+            
+            foreach ($this->options as $slug=>$value){
+                $new_options[$slug] = trim($_POST['ari_options'][$slug]);
+            }
+            
+            if (update_option("_ari_options",$new_options)){
+                ?>
+                <div class='update-nag'><?php _e('Options saved !','ari');?></div>
+                <?php
+            }
+        }
+        ?>
+        <div class="main-form">
+            <div class="ari-leftbar">
+              <p>Archive images from remote website base on url, automatic archive images when save post/page, able to customize setting for each post.</p>
+              <p>Following links can help you:</p>
+
+               <ul style="margin-left:40px;"> 
+               <li><a href="http://www.lookingimage.com/wordpress-plugin/wordpress-archive-remote-images/" target="_blank">Details and video tutorial (FAQ .etc)</a></li>
+               <li><a href="http://www.lookingimage.com/forums/discussion/" target="_blank">Support forum</a></li>
+               <li><a href="http://lookingimage.com/" target="_blank">Author home page</a></li>
+               <li><a href="http://www.lookingimage.com/wordpress-themes/" target="_blank">Free WordPress themes</a></li>
+               <li><a href="http://www.lookingimage.com/wordpress-plugin/" target="_blank">Other plugins from lookingimage.com</a></li>
+               </ul>
+
+
+
+                    <form id="option-form" method="post" name="option-form">
+                            <table id="aws-option-table" class="ari-table">
+                                    <tr>
+                                            <td>Enable 'Archive Remote Images' overall switch: <a href="http://www.runinweb.com/projects/archive-remote-images/#overall" target="_blank">(help?)</a></td>
+                                            <td><input<?php checked( $this->options["overall_switch"], 'on' ); ?>  type="checkbox" id="ari_options[overall_switch]" name="ari_overall_switch" /></td>
+                                    </tr>
+                                    <tr>
+                                            <td>Auto archive when post saving as default setting:  <a href="http://www.runinweb.com/projects/archive-remote-images/#default_checked" target="_blank">(help?)</a></td>
+                                            <td><input<?php checked( $this->options['default_checked'], 'on' ); ?> type="checkbox" id="ari_options[default_checked]" name="ari_default_checked" /></td>
+                                    </tr>
+                                <tr>
+                                            <td>Display Archive Remote Images option box in post page:  <a href="http://www.runinweb.com/projects/archive-remote-images/#Display_control" target="_blank">(help?)</a></td>
+                                            <td><input<?php checked( $this->options['display_box'], 'on' ); ?> type="checkbox" id="ari_options[display_box]" name="ari_display_box" /></td>
+                                    </tr>
+
+                                    <tr><td colspan="2"><br/><input id="option-save" class="ari-button" type="submit" name="option-save" value="Save options"/></td></tr>
+                            </table>
+
+
+                    </form>
+            </div>
+
+            <div class="ari-rightbar">
+                <iframe width="300" height="530" frameborder="1" src="http://www.runinweb.com/news.html"></iframe>
+                <div style="clear:both;"></div>
+            </div>
+        </div>
+
+         <?php
+    }
+    
+    /**
+    * This function registers a metabox with the callback archive_remote_images_meta_box_callback.
+    * For reference: add_meta_box( $id, $title, $callback, $page, $context, $priority, $callback_args );
+    *
+    */
+
+    function metabox_init(){
+        $post_types = get_post_types();
+
+        foreach ($post_types as $post_type){
+            if ($this->options['overall_switch'] == 'on' and $this->options['display_box'] == 'on')
+                add_meta_box('ari', __('Archive Image Options','ari'), array(&$this,'metabox_content'), $post_type, 'side', 'high');
+        }
+
+    }
+
+    
+    function metabox_content($post){
+        $transfer_image_value = get_post_meta($post->ID, 'transfer_image', TRUE);
+        $check_one            = '';
+        $check_two            = '';
+
+        if ($transfer_image_value != 'yes' && $transfer_image_value != 'no') {
+
+            if ($this->options['default_checked'] == "on") {
+                $check_one = 'checked="checked"';
+            } else {
+                $check_two = 'checked="checked"';
+            }
+        } else {
+            if ($transfer_image_value == 'yes') {
+                $check_one = 'checked="checked"';
+            } else {
+                $check_two = 'checked="checked"';
+            }
+        }
+        ?>
+        <div id="post-img-select">
+            <p>Archive: &nbsp;
+                <input type="radio"value="yes" <?php echo $check_one; ?> id="img-cache-yes-0" class="img-cache-yes" name="transfer_image"> <label for="img-cache-yes-0">Yes</label>
+                <input type="radio" value="no" <?php echo $check_two; ?>  id="img-cache-yes-video" class="img-cache-yes" name="transfer_image"> <label for="img-cache-yes-video">No</label>
+                <?php wp_nonce_field($this->basename,'ari_form',false);?>
+            </p>	
+        </div>
+        <?php
+    }
+
+    function save_post_metadata($post_id){
+            //check save status
+            $is_autosave = wp_is_post_autosave( $post_id );
+            $is_revision = wp_is_post_revision( $post_id );
+            $is_valid_nonce = false;
+            if ( isset( $_POST[ 'ari_form' ]) && wp_verify_nonce( $_POST['ari_form'], $this->basename)) $is_valid_nonce=true;
+            
+            if ($is_autosave || $is_revision || !$is_valid_nonce) return $post_id;
+            
+            //capabilities
+            if (!current_user_can('edit_post', $post_id)) return $post_id;
+            if (!current_user_can('upload_files', $post_id)) return $post_id;
+            
+            // OK, we're authenticated: we need to find and save the data  
+            update_post_meta($post_id, 'transfer_image', esc_attr($_POST['transfer_image']));
+
+            return $post_id;
+
+    }
+    
+    // retrieve images from content
+    function archive_find_images($content){
+        $save_atts = array('src','alt','title');
+        $images = array();
+        $doc = new DOMDocument(); 
+        $doc -> loadHTML($content); 
+        $out = simplexml_import_dom($doc); 
+        $img_el_all = $out -> xpath('//img'); 
+
+        foreach ($img_el_all as $img_el) {
+
+            $image = array();
+            
+            foreach($img_el->attributes() as $att => $value) {
+                
+                if (!in_array($att, $save_atts)) continue;
+                
+                $value = (string)$value;
+                if (!$value) continue;
+                
+                $image[$att] = $value;
+
+            }
+            
+            
+            $image = array_filter($image);
+            if (!array_key_exists('src', $image)) continue;
+            $images[] = $image;
+            
+        }
+        
+        $images = array_filter($images);
+        return $images;
+    }
+    
+    /*
+     * Archive images on while saving
+     */
+    
+    function save_post_images($post_id, $post){
+        global $wpdb;
+        
+        //check save status
+        $is_autosave = wp_is_post_autosave( $post_id );
+        $is_revision = wp_is_post_revision( $post_id );
+        
+        if ($is_revision) return $post_id;
+        if ($is_autosave) return $post_id;
+        if ( $this->options["overall_switch"] != "on" && $_POST['transfer_image'] == "no") return $post_id;
+        
+        //get images urls in post content
+        $images = self::archive_find_images($post->post_content);
+
+        foreach ($images as $image){
+            $post->post_content = self::content_replace_remote_image($image, $post);
+        }
+        
+        
+        //remove hooks (avoid infinite loops)
+        remove_action('save_post', array( $this, 'save_post_metadata' ));
+        remove_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
+        
+        //update post
+        $post->post_content = apply_filters('ari_get_replaced_post_content',$post->post_content,$post);
+        wp_update_post( $post );
+        
+        //re-hooks
+        add_action('save_post', array( $this, 'save_post_metadata' ));
+        add_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
+        
+        
+        return $post_id;
+    }
+    
+    function is_local_image($url){
+
+        $is_local = strpos($url, home_url());
+        
+        return (bool)($is_local !== false);
+        
+        if ($is_local !== false) {
+            return true;
+        }
+        
+
+    }
+    
+    function get_url_from_special_domain($url){
+        $check_domains = array(
+            'blogspot.com',
+            'blogger.com',
+            'ggpht.com',
+            'googleusercontent.com',
+            'gstatic.com'
+        );
+        
+        foreach ($check_domains as $check_domain){
+            if (strpos($url, $check_domain)){
+                
+                $response = wp_remote_request($url);
+                if (is_wp_error($response))
+                    return 'error1';
+
+                $my_body = wp_remote_retrieve_body($response);
+
+                if (strpos($my_body, 'src')) {
+                    preg_match_all('|<img.*?src=[\'"](.*?)[\'"].*?>|i', $my_body, $matches);
+                    foreach ($matches[1] as $url):
+                        $spisak = $url;
+                    endforeach;
+
+                    $url = $spisak;
+                    
+                }
+            }
+        }
+        
+        return $url;
+        
+    }
+    
+    function get_image_title($image){
+        $title = '';
+        if (array_key_exists('title', $image)){
+            $title = $image['title'];
+        }elseif (array_key_exists('alt', $image)){
+            $title = $image['alt'];
+        }
+        return apply_filters('ari_get_image_title',$title);
+    }
+    
+    function get_id_from_already_uploaded_source($img_url){
+        $query_args = array(
+            'post_type'         => 'attachment',
+            'post_status'       => 'inherit',
+            'meta_query'        => array(
+                array(
+                    'key'     => '_ari-url',
+                    'value'   => $img_url,
+                    'compare' => '='
+                )
+            ),
+            'posts_per_page'    => 1
+        );
+
+        $query = new WP_Query($query_args);
+        if (!$query->have_posts()) return false;
+        return $query->posts[0]->ID;
+    }
+
+    
+    /**
+     * Archive image from content
+     */
+    function content_replace_remote_image($image, $post){
+        global $wpdb;
+        
+        $post_content = $post->post_content;
+        $url = $image['src'];
+
+        if (!self::is_local_image($image['src'])){
+            
+            //this image url already has been uploaded
+            $already_uploaded_id = self::get_id_from_already_uploaded_source($image['src']);
+            
+            if ($already_uploaded_id){
+                
+                $attachment_id = $already_uploaded_id;
+                
+            }else{
+                //check if image is from one of those domains
+                //TO FIX what's the purpose of this ?
+
+                $url = self::get_url_from_special_domain($image['src']);
+
+                //get image title
+                $img_title = self::get_image_title($image);
+
+                set_time_limit(300);
+                $upload = media_sideload_image($url, $post->ID, $img_title);
+                if (!is_wp_error($upload)){
+                    $attachment_id = self::retrieve_sideload_upload_id($upload);
+                }
+            }
+
+            if ($attachment_id){
+                $attachment_html = wp_get_attachment_image( $attachment_id, 'full' );
+                $attachment_html = apply_filters('ari_get_attachment_html',$attachment_html,$attachment_id);
+
+                //add original URL to attachment, as meta
+                add_post_meta($attachment_id, '_ari-url',$url);
+
+                //replace image in content
+                $doc = new DOMDocument();
+                $doc->loadHTML($post_content);
+                $imageTags = $doc->getElementsByTagName('img');
+
+                $frag = $doc->createDocumentFragment();
+                $frag->appendXML($attachment_html);
+
+                foreach ($imageTags as $imageTag){
+                    $imageTag_url = $imageTag->getAttribute('src');
+                    if ($imageTag_url != $url) continue;
+
+
+                    $imageTag->parentNode->replaceChild($frag, $imageTag);
+
+
+                }
+
+                # remove <html><body></body></html> 
+                //TO FIX
+                
+                $post_content =  $doc->saveHTML();
+            }
+
+        }
+        
+        
+        return $post_content;
+    }
+    
+    /* little hack to get back the ID of the attachment
+     * TO FIX should be improved ?
+     */
+    function retrieve_sideload_upload_id($upload){
+        global $wpdb;
+        
+        $doc = new DOMDocument();
+        $doc->loadHTML($upload);
+        $imageTags = $doc->getElementsByTagName('img');
+        
+        foreach($imageTags as $tag) {
+            $image_url = $tag->getAttribute('src');
+            $attachment = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->prefix}posts WHERE guid RLIKE %s;", $image_url ) );
+
+            return $attachment[0];
         }
     }
-    set_time_limit(300);
-    require_once(ABSPATH . 'wp-admin/includes/media.php');
-    require_once(ABSPATH . 'wp-admin/includes/file.php');
-    $upload = media_sideload_image($url, $postid);
-    if (!is_wp_error($upload)) {
-        preg_match_all('|<img.*?src=[\'"](.*?)[\'"].*?>|i', $upload, $locals);
-        foreach ($locals[1] as $newurl):
-            $wpdb->query("UPDATE $wpdb->posts SET post_content = REPLACE(post_content, '$orig_url', '$newurl');");
-        endforeach;
-    }
-    return $url;
-}
-/*
- * Archive images on while saving
- */
-function archive_save_post($post_ID, $post)
-{
-    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE && get_option('ari_archive_autosave') != "on")
-        return $post_id;
-    if (get_option('ari_overall_swich') != "on" && $_POST['transfer_image'] == "no") {
-        return $post_ID;
-    }
-    global $wpdb;
-    $domains = archive_find_images($post->post_content, $domains);
-    if (!$domains)
-        return $post_ID;
-    $local_domain = parse_url(get_option('siteurl'));
-    foreach ($domains as $domain => $num):
-        if (strstr($domain, $local_domain['host']))
-            continue; // check if is local images
         
-        preg_match_all('|<img.*?src=[\'"](.*?)[\'"].*?>|i', $post->post_content, $matches);
-        foreach ($matches[1] as $url):
-            if (strstr($url, get_option('siteurl') . '/' . get_option('upload_path')) || !strstr($url, $domain) || (($res) && in_multi_array($url, $res)))
-                continue; // check if is local images
-            archive_image_from_remote($url, $post_ID);
-        endforeach;
-    endforeach;
-    return $post_ID;
+
 }
-add_action('save_post', 'archive_save_post', 10, 2);
-?>
+
+/**
+ * The main function responsible for returning the one true Instance
+ * to functions everywhere.
+ *
+ * Use this function like you would a global variable, except without needing
+ * to declare the global.
+ *
+ * @return The one true Instance
+ */
+
+function ari() {
+	return ArchiveRemoteImage::instance();
+}
+
+ari();
