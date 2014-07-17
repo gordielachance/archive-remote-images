@@ -55,12 +55,12 @@ A: Yes, there is several hooks you can use.  Search in the code for "apply_filte
 
 =  1.0.4 =
 * Localization.
-* If the remote image is wrapped into a link pointing to the same remote file, replace that link.
+* If the remote image is wrapped into a link pointing to the same remote file, replace that link.  Can be filtered with hook 'ari_get_new_link_html'.
 * Cleaned settings page (uses now Wordpress functions); and moved under the >Media section.
 * Saves image title if a "title" or "alt" attribute is set on the remote image
 * Fixed bug with revisions
 * Avoid uploading several times the same image (checking its source, which is saved as "_ari-url" post meta)
-* Whole image tag replacement, not only source url replacement.  Can be filtered with hook 'ari_get_attachment_html'.
+* Whole image tag replacement, not only source url replacement.  Can be filtered with hook 'ari_get_new_image_html'.
 * Changed regex stuff with DOM parser (more reliable)
 * Replaced SQL queries with WP core functions
 * Wrapped plugin into a class
