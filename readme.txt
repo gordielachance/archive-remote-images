@@ -54,6 +54,7 @@ A: Yes, there is several hooks you can use.  Search in the code for "apply_filte
 == Changelog ==
 
 =  1.0.4 =
+* Localization.
 * If the remote image is wrapped into a link pointing to the same remote file, replace that link.
 * Cleaned settings page (uses now Wordpress functions); and moved under the >Media section.
 * Saves image title if a "title" or "alt" attribute is set on the remote image
