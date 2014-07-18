@@ -30,7 +30,8 @@ class AriSettings{
         $default = array(
             'default_checked'       => false,
             'post_types'            => self::option_post_type_allowed(),
-            'replace_parent_link'   => true
+            'replace_parent_link'   => true,
+            'time_limit'            => ini_get('max_execution_time'),
         );
         return $default;
     }
@@ -59,8 +60,8 @@ class AriSettings{
      */
     public function add_plugin_page()
     {
-        // This page will be under "Media"
-        add_media_page(
+        // This page will be under "Settings"
+        add_options_page(
                 __('Archive Remote Images','ari'),
                 __('Archive Remote Images','ari'),
                 'manage_options',
@@ -131,7 +132,30 @@ class AriSettings{
             array( $this, 'replace_parent_link_callback' ), 
             'ari-setting-admin', 
             'settings_general'
-        );   
+        );
+        
+        add_settings_section(
+            'settings_system', // ID
+            __('System Options','ari'), // Title
+            array( $this, 'section_system_desc' ), // Callback
+            'ari-setting-admin' // Page
+        );
+        
+        add_settings_field(
+            'time_limit', 
+            __('Time Limit','ari'), 
+            array( $this, 'time_limit_callback' ), 
+            'ari-setting-admin', 
+            'settings_system'
+        );
+        
+        add_settings_field(
+            'reset_options', 
+            __('Reset Options','ari'), 
+            array( $this, 'reset_options_callback' ), 
+            'ari-setting-admin', 
+            'settings_system'
+        );
         
     }
 
@@ -141,24 +165,37 @@ class AriSettings{
      * @param array $input Contains all settings fields as array keys
      */
     public function sanitize( $input ){
-        
 
         $new_input = array();
         
-        //post types
-        $new_input['post_types'] = array();
-        foreach ((array)$input['post_types'] as $post_type => $value){
-            if (!post_type_exists( $post_type )) continue;
-            $new_input['post_types'][] = $post_type;
+        if( isset( $input['reset_options'] ) ){
+            
+            $new_input = self::get_default_settings();
+            
+        }else{
+            
+            //post types
+            $new_input['post_types'] = array();
+            foreach ((array)$input['post_types'] as $post_type => $value){
+                if (!post_type_exists( $post_type )) continue;
+                $new_input['post_types'][] = $post_type;
+            }
+
+            //default checked
+            if( isset( $input['default_checked'] ) )
+                $new_input['default_checked'] = (bool)( $input['default_checked'] );
+
+            //parent link
+            if( isset( $input['replace_parent_link'] ) )
+                $new_input['replace_parent_link'] = (bool)( $input['replace_parent_link'] );
+            
+            //time limit
+            if( isset( $input['time_limit'] ) ){
+                $new_input['time_limit'] = absint($input['time_limit']);
+            }
+            
         }
         
-        //default checked
-        if( isset( $input['default_checked'] ) )
-            $new_input['default_checked'] = (bool)( $input['default_checked'] );
-        
-        //parent link
-        if( isset( $input['replace_parent_link'] ) )
-            $new_input['replace_parent_link'] = (bool)( $input['replace_parent_link'] );
         
 
         $new_input = array_filter($new_input);
@@ -204,7 +241,7 @@ class AriSettings{
             $name = $post_type->name;
             $checked = checked( in_array($slug,$option), true, false );
             printf(
-                '<input type="checkbox" name="%1s[post_types][%2s]" value="on" %3s/> %4s<br/>',
+                '<input type="checkbox" name="%1$s[post_types][%2$s]" value="on" %3$s/> %4$s<br/>',
                 $this->option_name,
                 $slug,
                 $checked,
@@ -223,7 +260,7 @@ class AriSettings{
         $checked = checked( (bool)$option, true, false );
                 
         printf(
-            '<input type="checkbox" name="%1s[default_checked]" value="on" %2s/>',
+            '<input type="checkbox" name="%1$s[default_checked]" value="on" %2$s/>',
             $this->option_name,
             $checked
         );
@@ -236,10 +273,37 @@ class AriSettings{
         $checked = checked( (bool)$option, true, false );
                 
         printf(
-            '<input type="checkbox" name="%1s[replace_parent_link]" value="on" %2s/> %3s',
+            '<input type="checkbox" name="%1$s[replace_parent_link]" value="on" %2$s/> %3$s',
             $this->option_name,
             $checked,
             __("If the remote image is wrapped into a link pointing to the same remote file, replace that link.","ari")
+        );
+    }
+    
+    public function section_system_desc(){
+    }
+    
+    public function time_limit_callback(){
+        
+        $option = absint(ari()->get_setting('time_limit'));
+        $min = 0;
+        $max = 600;
+        
+        printf(
+            '<input type="number" name="%1$s[time_limit]" value="%2$d" class="small-text" min="%3$d" max="%4$d"/> %5$s',
+            $this->option_name,
+            $option,
+            $min,
+            $max,
+            __("Limits the maximum execution time for the script (seconds).","ari")
+        );
+    }
+    
+    public function reset_options_callback(){
+        printf(
+            '<input type="checkbox" name="%1$s[reset_options]" value="on"/> %2$s',
+            $this->option_name,
+            __("Reset options to their default values.","ari")
         );
     }
     

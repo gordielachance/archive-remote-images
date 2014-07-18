@@ -33,7 +33,7 @@ If you are a plugin developer, [we would like to hear from you](https://github.c
 == Installation ==
 
 1. Upload the plugin to your blog and Activate it.
-2. Setup the plugin in the Media menu -> Archive Remote Images.
+2. Setup the plugin in the Settings menu -> Archive Remote Images.
 3. Edit a post with remote images, and check "Archive Remote Images".
 
 == Frequently asked questions ==

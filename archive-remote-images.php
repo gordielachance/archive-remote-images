@@ -258,8 +258,11 @@ class ArchiveRemoteImage{
         //checkbox not checked
         if (!isset($_POST['transfer_image'])) return $post_id;
         
-        set_time_limit(120);
-        
+        //script time limit
+        if ($time_limit = self::get_setting('time_limit')){
+            set_time_limit($time_limit);
+        }
+
         //load HTML for the parser
         libxml_use_internal_errors(true); //avoid errors like duplicate IDs
 
