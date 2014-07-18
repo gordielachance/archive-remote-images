@@ -65,10 +65,9 @@ class ArchiveRemoteImages{
      * time. Also prevents needing to define globals all over the place.
      *
      * @staticvar array $instance
-     * @uses ukeGeeks::setup_globals() Setup the globals needed
-     * @uses ukeGeeks::includes() Include the required files
-     * @uses ukeGeeks::setup_actions() Setup the hooks and actions
-     * @see ukegeeks()
+     * @uses ::setup_globals() Setup the globals needed
+     * @uses ::includes() Include the required files
+     * @uses ::setup_actions() Setup the hooks and actions
      * @return The instance
      */
     public static function instance() {
@@ -90,7 +89,6 @@ class ArchiveRemoteImages{
         require( $this->plugin_dir . 'ari-settings.php');
     }
 
-
     function setup_globals(){
         global $wpdb;
 
@@ -103,11 +101,8 @@ class ArchiveRemoteImages{
         
         $this->options_class = new AriSettings(); 
         
-
     }
     
-
-
     function setup_actions(){
 
         //localization
@@ -118,9 +113,9 @@ class ArchiveRemoteImages{
 
         //metabox
         add_action( 'add_meta_boxes',  array( $this, 'metabox_init' ) );
-        add_action( 'save_post',  array( $this, 'save_post_metadata' ) );
 
         //post processing
+        add_action( 'save_post',  array( $this, 'save_post_metadata' ) );
         add_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
 
     }
@@ -165,7 +160,6 @@ class ArchiveRemoteImages{
 
     }
 
-    
     function metabox_content($post){
         
         $checked = self::get_setting('default_checked');
@@ -279,10 +273,8 @@ class ArchiveRemoteImages{
             set_time_limit($time_limit);
         }
 
-        //load HTML for the parser
+        //DOMDocument
         libxml_use_internal_errors(true); //avoid errors like duplicate IDs
-
-        
         $doc = new DOMDocument();
         
         //try to fix bad HTML
@@ -472,10 +464,10 @@ class ArchiveRemoteImages{
 
                     $link_src = $parentNode->getAttribute('href');
 
-                    //url and image are the same
+                    //link url and image source are the same
                     if ($link_src == $url){
 
-                        $linked_image_url = self::get_linked_image_url($attachment_id); //media file
+                        $linked_image_url = self::get_linked_image_url($attachment_id);
 
                         $image_linked_size = self::get_setting('image_linked_size');
                         $new_image_html = wp_get_attachment_image( $attachment_id, $image_linked_size );
@@ -490,7 +482,6 @@ class ArchiveRemoteImages{
 
                     }
 
-
                 }
 
             }
@@ -499,7 +490,6 @@ class ArchiveRemoteImages{
             $post_content =  $doc->saveHTML();
 
         }
-        
         
         return $post_content;
     }
@@ -547,9 +537,6 @@ class ArchiveRemoteImages{
         unset( $meta_posts);
         return (int)$meta_post_count;
     }
-    
-
-        
 
 }
 
@@ -564,7 +551,6 @@ class ArchiveRemoteImages{
  */
 
 function ari() {
-        
 	return ArchiveRemoteImages::instance();
 }
 
