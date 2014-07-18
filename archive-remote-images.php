@@ -1,6 +1,6 @@
 <?php
 /*
- * Plugin Name: Archive Remote Image
+ * Plugin Name: Archive Remote Images
  * Plugin URI: https://wordpress.org/plugins/archive-remote-images
  * Description: Archive Remote Images allows you to scans a post to fetch remote images; then updates its content automatically.
  * Author: Kason Zhao, G.Breant
@@ -12,7 +12,7 @@
  */
 
 
-class ArchiveRemoteImage{
+class ArchiveRemoteImages{
     /** Version ***************************************************************/
 
     /**
@@ -73,7 +73,7 @@ class ArchiveRemoteImage{
      */
     public static function instance() {
             if ( ! isset( self::$instance ) ) {
-                    self::$instance = new ArchiveRemoteImage;
+                    self::$instance = new ArchiveRemoteImages;
                     self::$instance->includes();
                     self::$instance->setup_globals();
                     self::$instance->setup_actions();
@@ -556,7 +556,7 @@ class ArchiveRemoteImage{
 
 function ari() {
         
-	return ArchiveRemoteImage::instance();
+	return ArchiveRemoteImages::instance();
 }
 
 if (is_admin()){
