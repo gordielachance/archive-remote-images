@@ -2,7 +2,7 @@
 /*
  * Plugin Name: Archive Remote Image
  * Plugin URI: https://wordpress.org/plugins/archive-remote-images
- * Description: Advanced remote images grabber, automatically save the remote img to local, saves them directly into your blog media directory and attaches to the app
+ * Description: Archive Remote Images allows you to scans a post to fetch remote images; then updates its content automatically.
  * Author: Kason Zhao, G.Breant
  * Version: 1.0.4
  * Author URI: https://profiles.wordpress.org/kasonzhao/

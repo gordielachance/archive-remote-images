@@ -8,11 +8,11 @@ Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Archive Remote Images allows you to scans a post to fetch remote images; then it updates its content automatically.
+Archive Remote Images allows you to scans a post to fetch remote images; then updates its content automatically.
 
 == Description ==
 
-Archive Remote Images allows you to scans a post to fetch remote images; then it updates its content automatically.
+Archive Remote Images allows you to scans a post to fetch remote images; then updates its content automatically.
 
 A new metabox will appear when editing a post.  
 If "Archive Remote Images" is checked, the plugin will grab all remote images and update the content when saving that post.
