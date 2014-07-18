@@ -50,7 +50,6 @@ class ArchiveRemoteImage{
      */
     
     var $options_class;
-    
 
     /**
      * @var The one true Instance
@@ -201,7 +200,7 @@ class ArchiveRemoteImage{
             if (isset($_POST['transfer_image'])){
                 $checked = "yes";
             }
-
+            
             update_post_meta($post_id, 'transfer_image', $checked);
 
             return $post_id;
@@ -209,7 +208,7 @@ class ArchiveRemoteImage{
     }
     
     // retrieve images from content
-    function fetch_all_images($doc){
+    function fetch_remote_images($doc){
         $save_atts = array('src','alt','title');
         $images = array();
         $out = simplexml_import_dom($doc); 
@@ -233,11 +232,14 @@ class ArchiveRemoteImage{
             
             $image = array_filter($image);
             if (!array_key_exists('src', $image)) continue;
+            if (self::is_local_image($image['src'])) continue; //is local image
+            
             $images[] = $image;
             
         }
         
         $images = array_filter($images);
+        
         return $images;
     }
     
@@ -276,11 +278,12 @@ class ArchiveRemoteImage{
         $doc->loadHTML($post->post_content);
 
         //get images urls in post content
-        $images = self::fetch_all_images($doc);
+        $images = self::fetch_remote_images($doc);
         
-        //remove hooks (avoid infinite loops)
+        //remove hooks (avoid infinite loops, disable revisions)
         remove_action('save_post', array( $this, 'save_post_metadata' ));
         remove_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
+        remove_action('pre_post_update', 'wp_save_post_revision');// stop revisions
         
         foreach ($images as $image){
             $post->post_content = self::replace_single_image($image, $post, $doc);
@@ -294,6 +297,7 @@ class ArchiveRemoteImage{
         //re-hooks
         add_action('save_post', array( $this, 'save_post_metadata' ));
         add_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
+        add_action('pre_post_update', 'wp_save_post_revision');//  enable revisions again
         
         
         return $post_id;
@@ -385,81 +389,93 @@ class ArchiveRemoteImage{
         $post_content = $post->post_content;
         $url = $image['src'];
 
-        if (!self::is_local_image($image['src'])){
-            
-            //this image url already has been uploaded
-            $already_uploaded_id = self::get_id_from_already_uploaded_source($image['src']);
-            
-            if ($already_uploaded_id){
-                
-                $attachment_id = $already_uploaded_id;
-                
-            }else{
-                //check if image is from one of those domains
-                //TO FIX what's the purpose of this ?
+        //this image url already has been uploaded
+        $already_uploaded_id = self::get_id_from_already_uploaded_source($image['src']);
 
-                $url = self::get_url_from_special_domain($image['src']);
+        if ($already_uploaded_id){
 
-                //get image title
-                $img_title = self::get_image_title($image);
+            $attachment_id = $already_uploaded_id;
 
-                $upload = media_sideload_image($url, $post->ID, $img_title);
-                if (!is_wp_error($upload)){
-                    $attachment_id = self::retrieve_sideload_upload_id($upload);
-                }
+        }else{
+            //check if image is from one of those domains
+            //TO FIX what's the purpose of this ?
+
+            $url = self::get_url_from_special_domain($image['src']);
+
+            //get image title
+            $img_title = self::get_image_title($image);
+
+            /*
+            media_sideload_image() do not returns the attachment ID.
+            hook and unhook a function to get over that.
+            it that function, we will save the source URL as post meta for the attachment.
+            The value will be $this->attachment_source, which is only used here.
+            This is kind of a hack, hope that media_sideload_image() will be able to return
+            The attachment ID in the future.
+            https:core.trac.wordpress.org/ticket/19629
+            */
+
+            //START HACK
+            $this->attachment_source = $url; 
+            add_action('add_attachment',array( $this, 'uploaded_image_save_source' ));
+
+            $upload = media_sideload_image($url, $post->ID, $img_title);
+
+            //STOP HACK
+            remove_action('add_attachment',array( $this, 'uploaded_image_save_source' )); //hook
+            $this->attachment_source = '';
+
+            if (!is_wp_error($upload)){
+                $attachment_id = self::get_id_from_already_uploaded_source($url);
             }
+        }
 
-            if (isset($attachment_id)){
-                $new_image_html = wp_get_attachment_image( $attachment_id, 'full' );
-                $new_image_html = apply_filters('ari_get_new_image_html',$new_image_html,$attachment_id);
-                $new_image_url = wp_get_attachment_url( $attachment_id );
-                
-                //add original URL to attachment, as meta
-                add_post_meta($attachment_id, '_ari-url',$url);
+        if (isset($attachment_id)){
+            $new_image_html = wp_get_attachment_image( $attachment_id, 'full' );
+            $new_image_html = apply_filters('ari_get_new_image_html',$new_image_html,$attachment_id);
+            $new_image_url = wp_get_attachment_url( $attachment_id );
 
-                //replace image in content
-                $imageTags = $doc->getElementsByTagName('img');
+            //replace image in content
+            $imageTags = $doc->getElementsByTagName('img');
 
-                $new_image_el = $doc->createDocumentFragment();
-                $new_image_el->appendXML($new_image_html);
+            $new_image_el = $doc->createDocumentFragment();
+            $new_image_el->appendXML($new_image_html);
 
-                foreach ($imageTags as $imageTag){
-                    $imageTag_url = $imageTag->getAttribute('src');
-                    if ($imageTag_url != $url) continue;
-                    
-                    $parentNode = $imageTag->parentNode;
+            foreach ($imageTags as $imageTag){
+                $imageTag_url = $imageTag->getAttribute('src');
+                if ($imageTag_url != $url) continue;
 
-                    //replace <img> tag
-                    $parentNode->replaceChild($new_image_el, $imageTag);
-                    
-                    //if the parent tag of the image is a link to the (same) image,
-                    //replace that link with a link to the uploaded image.
-                    if (($parentNode->tagName == 'a') && (self::get_setting('replace_parent_link'))){
+                $parentNode = $imageTag->parentNode;
 
-                        $link_src = $parentNode->getAttribute('href');
-                        
-                        //url and image are the same
-                        if ($link_src == $url){
-                            $new_image_html = wp_get_attachment_image( $attachment_id, 'medium' );
-                            $new_link_html = '<a href="'.$new_image_url.'">'.$new_image_html.'</a>';
-                            $new_link_html = apply_filters('ari_get_new_link_html',$new_link_html,$attachment_id);
-                            
-                            $new_link_el = $doc->createDocumentFragment();
-                            $new_link_el->appendXML($new_link_html);
-                            
-                            $parentNode->parentNode->replaceChild($new_link_el, $parentNode);
-                            
-                        }
-                        
+                //replace <img> tag
+                $parentNode->replaceChild($new_image_el, $imageTag);
+
+                //if the parent tag of the image is a link to the (same) image,
+                //replace that link with a link to the uploaded image.
+                if (($parentNode->tagName == 'a') && (self::get_setting('replace_parent_link'))){
+
+                    $link_src = $parentNode->getAttribute('href');
+
+                    //url and image are the same
+                    if ($link_src == $url){
+                        $new_image_html = wp_get_attachment_image( $attachment_id, 'medium' );
+                        $new_link_html = '<a href="'.$new_image_url.'">'.$new_image_html.'</a>';
+                        $new_link_html = apply_filters('ari_get_new_link_html',$new_link_html,$attachment_id);
+
+                        $new_link_el = $doc->createDocumentFragment();
+                        $new_link_el->appendXML($new_link_html);
+
+                        $parentNode->parentNode->replaceChild($new_link_el, $parentNode);
 
                     }
 
+
                 }
-                
-                //TO FIX : remove doctype, html and body tags.
-                $post_content =  $doc->saveHTML();
 
             }
+
+            //TO FIX : remove doctype, html and body tags.
+            $post_content =  $doc->saveHTML();
 
         }
         
@@ -467,22 +483,12 @@ class ArchiveRemoteImage{
         return $post_content;
     }
     
-    /* little hack to get back the ID of the attachment
-     * TO FIX should be improved ?
-     */
-    function retrieve_sideload_upload_id($upload){
-        global $wpdb;
+    function uploaded_image_save_source($attachment_id){
         
-        $doc = new DOMDocument();
-        $doc->loadHTML($upload);
-        $imageTags = $doc->getElementsByTagName('img');
-        
-        foreach($imageTags as $tag) {
-            $image_url = $tag->getAttribute('src');
-            $attachment = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->prefix}posts WHERE guid RLIKE %s;", $image_url ) );
+        $source = $this->attachment_source;
 
-            return $attachment[0];
-        }
+        //add original URL to attachment, as meta
+        add_post_meta($attachment_id, '_ari-url',$source);
     }
     
     /**
