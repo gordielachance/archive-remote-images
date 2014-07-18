@@ -29,7 +29,7 @@ class AriSettings{
     public function get_default_settings(){
         $default = array(
             'default_checked'       => false,
-            'ignored_post_type'            => self::allowed_post_types(),
+            'ignored_post_type'     => array(),
             'replace_parent_link'   => true,
             'time_limit'            => ini_get('max_execution_time'),
         );
