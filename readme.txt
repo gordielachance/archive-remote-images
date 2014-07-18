@@ -1,24 +1,23 @@
 === Archive Remote Images ===
 Contributors: Kasonzhao, grosbouff
 Donate link: 
-Tags: Archive Remote Images, image archive, Cache Images, auto save images.
+Tags: Archive Remote Images, image archive, grab images, cache Images, auto-save images, media
 Requires at least: 3.0
-Tested up to: 3.9.1
+Tested up to: 4.0
 Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Archive Remote Images scans a post for remote images and allows you to fetch them; then it updates the post content.
+Archive Remote Images allows you to scans a post to fetch remote images; then it updates its content automatically.
 
 == Description ==
 
-Archive Remote Images scans a post for remote images and allows you to fetch them; then it updates the post content.
+Archive Remote Images allows you to scans a post to fetch remote images; then it updates its content automatically.
 
 A new metabox will appear when editing a post.  
 If "Archive Remote Images" is checked, the plugin will grab all remote images and update the content when saving that post.
 
-* If the images is wrapped inside a link poiting to that same image, the link will be updated too.
-* Settings page.
+* Settings page with lot of options (see screenshot #2)
 * Several hooks allow advanced users to change the plugin's behaviour.
 
 = Contributors =
@@ -53,6 +52,7 @@ A: Yes, there is several hooks you can use.  Search in the code for "apply_filte
 == Changelog ==
 
 =  1.0.4 =
+* Lot of new options in the settings page.
 * Localization.
 * If the remote image is wrapped into a link pointing to the same remote file, replace that link.  Can be filtered with hook 'ari_get_new_link_html'.
 * Cleaned settings page (uses now Wordpress functions); and moved under the >Media section.
