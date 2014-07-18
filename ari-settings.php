@@ -95,7 +95,25 @@ class AriSettings{
         ?>
         <div class="wrap">
             <?php screen_icon(); ?>
-            <h2><?php _e('Archive Remote Images','ari');?></h2>           
+            <h2><?php _e('Archive Remote Images','ari');?></h2>  
+            
+            <?php
+            $count = ari()->count_downloaded_attachments();
+            if ($count){
+                ?>
+                <p>
+                    <?php
+                    printf(
+                        __('Already <strong>%1$d</strong> medias have been downloaded using Archive Remote Images !','ari'),
+                        $count
+                    );
+                    ?>
+                </p>
+                <?php
+            }
+            ?>
+            
+            
             <form method="post" action="options.php">
             <?php
                 // This prints out all hidden setting fields

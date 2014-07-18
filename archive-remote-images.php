@@ -484,6 +484,26 @@ class ArchiveRemoteImage{
             return $attachment[0];
         }
     }
+    
+    /**
+     * Count the number of medias already downloaded with Archive Remote Image
+     * @return int
+     */
+    
+    public function count_downloaded_attachments(){
+        
+        $query_args = array(
+            'post_type' => 'attachment',
+            'meta_key'  => '_ari-url',
+            'posts_per_page' => -1
+        );
+        
+        $meta_posts = get_posts( $query_args );
+        
+        $meta_post_count = count( $meta_posts );
+        unset( $meta_posts);
+        return (int)$meta_post_count;
+    }
         
 
 }
