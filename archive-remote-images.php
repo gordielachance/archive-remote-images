@@ -2,7 +2,7 @@
 /*
  * Plugin Name: Archive Remote Images
  * Plugin URI: https://wordpress.org/plugins/archive-remote-images
- * Description: Archive Remote Images allows you to scans a post to fetch remote images; then updates its content automatically.
+ * Description: Archive Remote Images allows you to scan a post to fetch remote images; then updates its content automatically.
  * Author: Kason Zhao, G.Breant
  * Version: 1.0.4
  * Author URI: https://profiles.wordpress.org/kasonzhao/
