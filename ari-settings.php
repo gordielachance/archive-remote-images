@@ -29,11 +29,27 @@ class AriSettings{
     public function get_default_settings(){
         $default = array(
             'default_checked'       => false,
-            'post_types'            => self::option_post_type_allowed(),
+            'ignored_post_type'            => self::allowed_post_types(),
             'replace_parent_link'   => true,
             'time_limit'            => ini_get('max_execution_time'),
         );
         return $default;
+    }
+    
+    public function allowed_post_types(){
+        $post_types = get_post_types();
+        $disabled = apply_filters('ari_option_post_type_disabled',array(
+            'attachment',
+            'revision',
+            'nav_menu_item'
+            )
+        );
+        $allowed = array();
+        foreach ((array)$post_types as $post_type){
+            if (in_array($post_type,$disabled)) continue;
+            $allowed[] = $post_type;
+        }
+        return $allowed;
     }
     
     function upgrade(){
@@ -111,9 +127,9 @@ class AriSettings{
         );  
 
         add_settings_field(
-            'post_types', // ID
+            'ignored_post_type', // ID
             __('Supported post types','ari'), // Title 
-            array( $this, 'post_types_callback' ), // Callback
+            array( $this, 'post_type_callback' ), // Callback
             'ari-setting-admin', // Page
             'settings_general' // Section           
         );      
@@ -175,10 +191,14 @@ class AriSettings{
         }else{
             
             //post types
-            $new_input['post_types'] = array();
-            foreach ((array)$input['post_types'] as $post_type => $value){
-                if (!post_type_exists( $post_type )) continue;
-                $new_input['post_types'][] = $post_type;
+            $post_types = self::allowed_post_types();
+            if( isset( $input['post_types'] ) ){
+                $new_input['ignored_post_type'] = array();
+                foreach ((array)$post_types as $post_type){
+                    if (!array_key_exists($post_type, $input['post_types'])) $new_input['ignored_post_type'][] = $post_type;
+                }
+            }else{
+                $new_input['ignored_post_type'] = $post_types;
             }
 
             //default checked
@@ -209,37 +229,20 @@ class AriSettings{
      */
     public function section_general_desc(){
     }
-    
-    public function option_post_type_allowed(){
-        $supported = array();
-        $post_types = get_post_types();
-        $disabled = apply_filters('ari_option_post_type_disabled',array(
-                'attachment',
-                'revision',
-                'nav_menu_item'
-            )
-        );
-        foreach ((array)$post_types as $slug){
-            if (in_array($slug,$disabled)) continue;
-            $supported[] = $slug;
-            
-        }
-        return $supported;
-    }
 
     /** 
      * Get the settings option array and print one of its values
      */
-    public function post_types_callback(){
+    public function post_type_callback(){
 
-        $option = (array)ari()->get_setting('post_types');
+        $ignored = (array)ari()->get_setting('ignored_post_type');
+        $post_types = self::allowed_post_types();
 
-        $post_types_allowed = self::option_post_type_allowed();
-        foreach ((array)$post_types_allowed as $slug){
+        foreach ((array)$post_types as $slug){
 
             $post_type = get_post_type_object($slug);
             $name = $post_type->name;
-            $checked = checked( in_array($slug,$option), true, false );
+            $checked = checked( in_array($slug,$ignored), false, false );
             printf(
                 '<input type="checkbox" name="%1$s[post_types][%2$s]" value="on" %3$s/> %4$s<br/>',
                 $this->option_name,

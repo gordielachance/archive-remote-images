@@ -151,11 +151,11 @@ class ArchiveRemoteImage{
     */
 
     function metabox_init(){
-        $post_types = get_post_types();
-        $supported = self::get_setting('post_types');
+        $post_types = $this->options_class->allowed_post_types();
+        $ignored = self::get_setting('ignored_post_type');
 
         foreach ($post_types as $post_type){
-            if (!in_array($post_type,$supported)) continue;
+            if (in_array($post_type,$ignored)) continue;
             add_meta_box('ari', __('Archive Remote Images','ari'), array(&$this,'metabox_content'), $post_type, 'side', 'high');
         }
 
