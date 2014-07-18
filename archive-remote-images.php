@@ -150,6 +150,11 @@ class ArchiveRemoteImages{
     */
 
     function metabox_init(){
+        
+        //capabilities
+        if (!current_user_can('edit_post', get_the_ID())) return false;
+        if (!current_user_can('upload_files', get_the_ID())) return false;
+        
         $post_types = $this->options_class->allowed_post_types();
         $ignored = self::get_setting('ignored_post_type');
 
@@ -261,6 +266,10 @@ class ArchiveRemoteImages{
         
         if ($is_revision) return $post_id;
         if ($is_autosave) return $post_id;
+        
+        //capabilities
+        if (!current_user_can('edit_post', $post_id)) return $post_id;
+        if (!current_user_can('upload_files', $post_id)) return $post_id;
  
         //checkbox not checked
         if (!isset($_POST['do_remote_archive'])) return $post_id;
