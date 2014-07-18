@@ -29,6 +29,7 @@ class AriSettings{
     public function get_default_settings(){
         $default = array(
             'default_checked'       => false,
+            'remember_status'       => false,
             'ignored_post_type'     => array(),
             'replace_parent_link'   => true,
             'time_limit'            => ini_get('max_execution_time'),
@@ -37,6 +38,12 @@ class AriSettings{
             'image_linked_target'   => "file"
         );
         return $default;
+    }
+    
+    public function get_default_setting($name){
+        $settings = self::get_default_settings();
+        if (!array_key_exists($name, $settings)) return false;
+        return $settings[$name];
     }
     
     public function allowed_post_types(){
@@ -161,7 +168,15 @@ class AriSettings{
             array( $this, 'default_checked_callback' ), 
             'ari-setting-admin', 
             'settings_general'
-        );   
+        );
+        
+        add_settings_field(
+            'remember_status', 
+            __('Remember status','ari'), 
+            array( $this, 'remember_status_callback' ), 
+            'ari-setting-admin', 
+            'settings_general'
+        );  
         
         add_settings_section(
             'settings_image', // ID
@@ -257,6 +272,10 @@ class AriSettings{
             if( isset( $input['default_checked'] ) )
                 $new_input['default_checked'] = (bool)( $input['default_checked'] );
             
+            //remember status
+            if( isset( $input['remember_status'] ) )
+                $new_input['remember_status'] = (bool)( $input['remember_status'] );
+            
             //image size
              if( isset( $input['image_size'] ) )
                 $new_input['image_size'] = self::sanitize_image_size("image_size",$input['image_size']);
@@ -291,8 +310,7 @@ class AriSettings{
     }
     
     function sanitize_image_size($option,$value){
-        $defaults = $this->get_default_settings();
-        $default = $defaults[$option];
+        $default = self::get_default_setting($option);
         $available = self::available_image_size();
 
         if (in_array($value,$available)){
@@ -303,8 +321,7 @@ class AriSettings{
     }
     
     function sanitize_linked_image_target($value){
-        $defaults = $this->get_default_settings();
-        $default = $defaults['image_linked_target'];
+        $default = self::get_default_setting('image_linked_target');
         $available = self::image_linked_available_target();
         $available_slugs = array_keys($available);
         
@@ -372,6 +389,20 @@ class AriSettings{
             '<input type="checkbox" name="%1$s[default_checked]" value="on" %2$s/>',
             $this->option_name,
             $checked
+        );
+    }
+    
+    public function remember_status_callback(){
+        
+        $option = ari()->get_setting('remember_status');
+
+        $checked = checked( (bool)$option, true, false );
+                
+        printf(
+            '<input type="checkbox" name="%1$s[remember_status]" value="on" %2$s/> %3$s',
+            $this->option_name,
+            $checked,
+            __("Remember archiving status for posts, so you don't need to click the checkbox each time.","ari")
         );
     }
     

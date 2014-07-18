@@ -164,18 +164,20 @@ class ArchiveRemoteImage{
     function metabox_content($post){
         
         $checked = self::get_setting('default_checked');
-
-        if ($meta_value = get_post_meta($post->ID, 'transfer_image', TRUE)){
-            if ($meta_value == 'yes'){
-                $checked = true;
-            }else{
-                $checked = false;
+        
+        if (self::get_setting('remember_status')){
+            if ($meta_value = get_post_meta($post->ID, 'ari_enabled', TRUE)){
+                if ($meta_value == 'yes'){
+                    $checked = true;
+                }else{
+                    $checked = false;
+                }
             }
         }
         
         ?>
         <div id="post-img-select">
-                <input type="checkbox"value="on" <?php checked((bool)$checked); ?> id="ari-metabox-check" name="transfer_image"> <label for="ari-metabox-check"><?php _e('Archive Remote Images','ari');?></label>
+                <input type="checkbox"value="on" <?php checked((bool)$checked); ?> id="ari-metabox-check" name="do_remote_archive"> <label for="ari-metabox-check"><?php _e('Archive Remote Images','ari');?></label>
                 <?php wp_nonce_field($this->basename,'ari_form',false);?>
             </p>	
         </div>
@@ -183,6 +185,9 @@ class ArchiveRemoteImage{
     }
 
     function save_post_metadata($post_id){
+        
+            if (!self::get_setting('remember_status')) return $post_id;
+        
             //check save status
             $is_autosave = wp_is_post_autosave( $post_id );
             $is_revision = wp_is_post_revision( $post_id );
@@ -197,11 +202,11 @@ class ArchiveRemoteImage{
             
             // OK, we're authenticated: we need to find and save the data 
             $checked = "no";
-            if (isset($_POST['transfer_image'])){
+            if (isset($_POST['do_remote_archive'])){
                 $checked = "yes";
             }
             
-            update_post_meta($post_id, 'transfer_image', $checked);
+            update_post_meta($post_id, 'ari_enabled', $checked);
 
             return $post_id;
 
@@ -258,7 +263,7 @@ class ArchiveRemoteImage{
         if ($is_autosave) return $post_id;
  
         //checkbox not checked
-        if (!isset($_POST['transfer_image'])) return $post_id;
+        if (!isset($_POST['do_remote_archive'])) return $post_id;
         
         //script time limit
         if ($time_limit = self::get_setting('time_limit')){
