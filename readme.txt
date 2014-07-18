@@ -47,9 +47,8 @@ A: Yes, there is several hooks you can use.  Search in the code for "apply_filte
 
 == Screenshots ==
 
-1. /screenshot-1.jpg
-
-2. /screenshot-2.jpg
+1. Metabox shown in the editor
+2. Settings page
 
 == Changelog ==
 
