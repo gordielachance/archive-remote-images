@@ -32,6 +32,9 @@ class AriSettings{
             'ignored_post_type'     => array(),
             'replace_parent_link'   => true,
             'time_limit'            => ini_get('max_execution_time'),
+            'image_size'            => "full",
+            'image_linked_size'     => "medium",
+            'image_linked_target'   => "file"
         );
         return $default;
     }
@@ -158,14 +161,45 @@ class AriSettings{
             array( $this, 'default_checked_callback' ), 
             'ari-setting-admin', 
             'settings_general'
-        );     
+        );   
+        
+        add_settings_section(
+            'settings_image', // ID
+            __('Image Options','ari'), // Title
+            array( $this, 'section_image_desc' ), // Callback
+            'ari-setting-admin' // Page
+        );
+        
+        add_settings_field(
+            'image_size', 
+            __('Image size','ari'), 
+            array( $this, 'image_size_callback' ), 
+            'ari-setting-admin', 
+            'settings_image'
+        );
         
         add_settings_field(
             'replace_parent_link', 
-            __('Replace parent link','ari'), 
+            __('Linked image','ari'), 
             array( $this, 'replace_parent_link_callback' ), 
             'ari-setting-admin', 
-            'settings_general'
+            'settings_image'
+        );
+        
+        add_settings_field(
+            'image_linked_size', 
+            __('Linked image size','ari'), 
+            array( $this, 'image_linked_size_callback' ), 
+            'ari-setting-admin', 
+            'settings_image'
+        );
+        
+        add_settings_field(
+            'image_linked_target', 
+            __('Linked image target','ari'), 
+            array( $this, 'image_linked_target_callback' ), 
+            'ari-setting-admin', 
+            'settings_image'
         );
         
         add_settings_section(
@@ -222,10 +256,24 @@ class AriSettings{
             //default checked
             if( isset( $input['default_checked'] ) )
                 $new_input['default_checked'] = (bool)( $input['default_checked'] );
+            
+            //image size
+             if( isset( $input['image_size'] ) )
+                $new_input['image_size'] = self::sanitize_image_size("image_size",$input['image_size']);
+             
+            //linked image size
+             if( isset( $input['image_linked_size'] ) )
+                $new_input['image_linked_size'] = self::sanitize_image_size("image_linked_size",$input['image_linked_size']);
 
             //parent link
             if( isset( $input['replace_parent_link'] ) )
                 $new_input['replace_parent_link'] = (bool)( $input['replace_parent_link'] );
+            
+            //linked image target
+            if ( isset( $input['image_linked_target'] )){
+                $new_input['image_linked_target'] = self::sanitize_linked_image_target($input['image_linked_target']);
+            };
+            
             
             //time limit
             if( isset( $input['time_limit'] ) ){
@@ -240,6 +288,46 @@ class AriSettings{
         
         return $new_input;
        
+    }
+    
+    function sanitize_image_size($option,$value){
+        $defaults = $this->get_default_settings();
+        $default = $defaults[$option];
+        $available = self::available_image_size();
+
+        if (in_array($value,$available)){
+            return $value;
+        }else{
+            return $default;
+        }
+    }
+    
+    function sanitize_linked_image_target($value){
+        $defaults = $this->get_default_settings();
+        $default = $defaults['image_linked_target'];
+        $available = self::image_linked_available_target();
+        $available_slugs = array_keys($available);
+        
+        if (in_array($value,$available_slugs)){
+            return $value;
+        }else{
+            return $default;
+        }
+        
+    }
+    
+    public function image_linked_available_target(){
+        $available = array(
+            'file' => __('Media File'), 
+            'post' => __('Attachment Page'),
+        );
+        return $available;
+    }
+    
+    public function available_image_size(){
+        $sizes[] = 'full';
+        $sizes = array_merge($sizes,get_intermediate_image_sizes());
+        return $sizes;
     }
 
     /** 
@@ -287,18 +375,67 @@ class AriSettings{
         );
     }
     
+    public function section_image_desc(){
+    }
+    
+
+    
+    public function image_size_callback(){
+        
+        $option = ari()->get_setting('image_size');
+        
+        $box = '<select name="'.$this->option_name.'[image_size]">';
+        foreach (self::available_image_size() as $size){
+            $box .= '<option value="'.$size.'" '.selected( $option, $size, false ).'>'.$size.'</option>';
+        }
+        $box.='</select> ';
+        
+        printf(
+            __('Embed %1$s image size','ari'),
+            $box
+        );
+    }
+    
+    public function image_linked_size_callback(){
+        
+        $option = ari()->get_setting('image_linked_size');
+        
+        $box = '<select name="'.$this->option_name.'[image_linked_size]">';
+        foreach (self::available_image_size() as $size){
+            $box .= '<option value="'.$size.'" '.selected( $option, $size, false ).'>'.$size.'</option>';
+        }
+        $box.='</select> ';
+        
+        printf(
+            __('Embed %1$s image size','ari'),
+            $box
+        );
+    }
+    
     public function replace_parent_link_callback(){
         
         $option = ari()->get_setting('replace_parent_link');
-
-        $checked = checked( (bool)$option, true, false );
                 
         printf(
             '<input type="checkbox" name="%1$s[replace_parent_link]" value="on" %2$s/> %3$s',
             $this->option_name,
-            $checked,
+            checked( (bool)$option, true, false ),
             __("If the remote image is wrapped into a link pointing to the same remote file, replace that link.","ari")
         );
+    }
+    
+    public function image_linked_target_callback(){
+        
+        $option = ari()->get_setting('image_linked_target');
+        
+        $box = '<select name="'.$this->option_name.'[image_linked_target]">';
+        foreach (self::image_linked_available_target() as $slug=>$name){
+            $box .= '<option value="'.$slug.'" '.selected( $option, $slug, false ).'>'.$name.'</option>';
+        }
+        $box.='</select> ';
+        
+        echo $box;
+
     }
     
     public function section_system_desc(){

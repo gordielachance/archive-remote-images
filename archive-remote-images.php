@@ -431,9 +431,11 @@ class ArchiveRemoteImage{
         }
 
         if (isset($attachment_id)){
-            $new_image_html = wp_get_attachment_image( $attachment_id, 'full' );
+            
+            $image_size = self::get_setting('image_size');
+            
+            $new_image_html = wp_get_attachment_image( $attachment_id, $image_size );
             $new_image_html = apply_filters('ari_get_new_image_html',$new_image_html,$attachment_id);
-            $new_image_url = wp_get_attachment_url( $attachment_id );
 
             //replace image in content
             $imageTags = $doc->getElementsByTagName('img');
@@ -458,13 +460,18 @@ class ArchiveRemoteImage{
 
                     //url and image are the same
                     if ($link_src == $url){
-                        $new_image_html = wp_get_attachment_image( $attachment_id, 'medium' );
-                        $new_link_html = '<a href="'.$new_image_url.'">'.$new_image_html.'</a>';
+
+                        $linked_image_url = self::get_linked_image_url($attachment_id); //media file
+
+                        $image_linked_size = self::get_setting('image_linked_size');
+                        $new_image_html = wp_get_attachment_image( $attachment_id, $image_linked_size );
+                        $new_link_html = '<a href="'.$linked_image_url.'">'.$new_image_html.'</a>';
                         $new_link_html = apply_filters('ari_get_new_link_html',$new_link_html,$attachment_id);
 
                         $new_link_el = $doc->createDocumentFragment();
                         $new_link_el->appendXML($new_link_html);
 
+                        //replace <a> tag
                         $parentNode->parentNode->replaceChild($new_link_el, $parentNode);
 
                     }
@@ -481,6 +488,22 @@ class ArchiveRemoteImage{
         
         
         return $post_content;
+    }
+    
+    function get_linked_image_url($attachment_id){
+        
+        $option = self::get_setting('image_linked_target');
+        
+        switch ($option) {
+            case 'post': //attachment page
+                $url = get_attachment_link( $attachment_id );
+            break;
+            default : // media url
+                $url = wp_get_attachment_url( $attachment_id );
+        }
+        
+        return apply_filters('ari_get_linked_image_url',$url, $attachment_id);
+        
     }
     
     function uploaded_image_save_source($attachment_id){
@@ -510,6 +533,8 @@ class ArchiveRemoteImage{
         unset( $meta_posts);
         return (int)$meta_post_count;
     }
+    
+
         
 
 }
