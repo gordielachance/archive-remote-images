@@ -155,7 +155,7 @@ class ArchiveRemoteImage{
         $ignored = self::get_setting('ignored_post_type');
 
         foreach ($post_types as $post_type){
-            if (in_array($post_type,$ignored)) continue;
+            if (($ignored) && (in_array($post_type,$ignored))) continue;
             add_meta_box('ari', __('Archive Remote Images','ari'), array(&$this,'metabox_content'), $post_type, 'side', 'high');
         }
 
