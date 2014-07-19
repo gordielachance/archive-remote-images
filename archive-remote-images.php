@@ -393,7 +393,7 @@ class ArchiveRemoteImages{
     }
     
     /*
-     * Adds the class wp-image-id 
+     * Adds the class wp-image-ID
      * Because it's easier to read when editing the code of the post content
      */
 
@@ -412,7 +412,7 @@ class ArchiveRemoteImages{
         return apply_filters('ari_get_image_title',$title);
     }
 
-    function get_id_from_already_uploaded_source($img_url){
+    function get_existing_attachment_id($img_url){
         $query_args = array(
             'post_type'         => 'attachment',
             'post_status'       => 'inherit',
@@ -428,7 +428,9 @@ class ArchiveRemoteImages{
 
         $query = new WP_Query($query_args);
         if (!$query->have_posts()) return false;
-        return $query->posts[0]->ID;
+        
+        $id = $query->posts[0]->ID;
+        return apply_filters("ari_get_existing_attachment_id",$id,$img_url);
     }
 
     
@@ -447,7 +449,7 @@ class ArchiveRemoteImages{
             
 
         //this image url already has been uploaded
-        $already_uploaded_id = self::get_id_from_already_uploaded_source($image_url);
+        $already_uploaded_id = self::get_existing_attachment_id($image_url);
 
         if ($already_uploaded_id){
 
@@ -479,7 +481,7 @@ class ArchiveRemoteImages{
             $this->attachment_source = '';
 
             if (!is_wp_error($upload)){
-                $attachment_id = self::get_id_from_already_uploaded_source($image_url);
+                $attachment_id = self::get_existing_attachment_id($image_url);
             }
         }
 
