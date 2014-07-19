@@ -239,6 +239,7 @@ class ArchiveRemoteImages{
             
             $image = array_filter($image);
             if (!array_key_exists('src', $image)) continue;
+            if (!self::is_absolute_url($image['src'])) continue; //is relative URL
             if (self::is_local_image($image['src'])) continue; //is local image
 
             $images[] = $image;
@@ -329,11 +330,23 @@ class ArchiveRemoteImages{
 
     }
     
+    /**
+     * Checks the URL is absolute
+     * @param type $url
+     */
+    
+    function is_absolute_url($url){
+        $parse = parse_url($url);
+        if (array_key_exists("host", $parse)) return true;
+        return false;
+    }
+    
     /*
      * Get domain (without subdomain like www.)
      */
     
     function get_domain($url){
+        if (!self::is_absolute_url($url)) return false;
         $parse = parse_url($url);
         $host_names = explode(".", $parse['host']);
         $domain = $host_names[count($host_names)-2] . "." . $host_names[count($host_names)-1];
