@@ -115,7 +115,7 @@ class ArchiveRemoteImages{
         add_action( 'add_meta_boxes',  array( $this, 'metabox_init' ) );
 
         //post processing
-        add_action( 'save_post',  array( $this, 'save_post_metadata' ) );
+        add_action( 'save_post',  array( $this, 'save_archiving_status' ) );
         add_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
         
         //TO FIX not sure this is unseful.  Commented.
@@ -186,7 +186,7 @@ class ArchiveRemoteImages{
         <?php
     }
 
-    function save_post_metadata($post_id){
+    function save_archiving_status($post_id){
         
             if (!self::get_setting('remember_status')) return $post_id;
         
@@ -293,7 +293,7 @@ class ArchiveRemoteImages{
         $images = self::fetch_remote_images($doc);
         
         //remove hooks (avoid infinite loops, disable revisions)
-        remove_action('save_post', array( $this, 'save_post_metadata' ));
+        remove_action('save_post', array( $this, 'save_archiving_status' ));
         remove_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
         remove_action('pre_post_update', 'wp_save_post_revision');// stop revisions
         
@@ -307,7 +307,7 @@ class ArchiveRemoteImages{
         }
 
         //re-hooks
-        add_action('save_post', array( $this, 'save_post_metadata' ));
+        add_action('save_post', array( $this, 'save_archiving_status' ));
         add_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
         add_action('pre_post_update', 'wp_save_post_revision');//  enable revisions again
         
