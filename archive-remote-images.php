@@ -442,11 +442,6 @@ class ArchiveRemoteImages{
         
         $post_content = $post->post_content;
         $image_url = $image['src'];
-        
-        //filter that allows to update the file URL if needed (eg. depending of the domain)
-        //(this hook is applied several times in the code)
-        $image_url = apply_filters('ari_get_remote_image_url',$image_url); 
-            
 
         //this image url already has been uploaded
         $already_uploaded_id = self::get_existing_attachment_id($image_url);
@@ -474,7 +469,9 @@ class ArchiveRemoteImages{
             $this->attachment_source = $image_url; 
             add_action('add_attachment',array( $this, 'uploaded_image_save_source' ));
 
-            $upload = media_sideload_image($image_url, $post->ID, $img_title);
+            //filter that allows to update the file URL if needed (eg. depending of the domain)
+            $image_url_filtered = apply_filters('ari_get_remote_image_url',$image_url); 
+            $upload = media_sideload_image($image_url_filtered, $post->ID, $img_title);
 
             //STOP HACK
             remove_action('add_attachment',array( $this, 'uploaded_image_save_source' )); //hook
@@ -501,11 +498,6 @@ class ArchiveRemoteImages{
                 foreach ($imageTags as $imageTag){
                     
                     $imageTag_url = $imageTag->getAttribute('src');
-                    
-                    //filter that allows to update the file URL if needed (eg. depending of the domain)
-                    //(this hook is applied several times in the code)
-                    $imageTag_url = apply_filters('ari_get_remote_image_url',$imageTag_url); 
-                    
                     if ($imageTag_url != $image_url) continue;
 
 
@@ -519,13 +511,9 @@ class ArchiveRemoteImages{
                     if (($parentNode->tagName == 'a') && (self::get_setting('replace_parent_link'))){
 
                         $link_src = $parentNode->getAttribute('href');
-                        
-                        //filter that allows to update the file URL if needed (eg. depending of the domain)
-                        //(this hook is applied several times in the code)
-                        $link_src = apply_filters('ari_get_remote_image_url',$link_src); 
 
                         //link url and image source are the same
-                        if ($link_src == $image_url){
+                        if ( $link_src == $image_url ){
 
                             $linked_image_url = self::get_linked_image_url($attachment_id);
 
