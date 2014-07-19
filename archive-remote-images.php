@@ -118,8 +118,8 @@ class ArchiveRemoteImages{
         add_action( 'save_post',  array( $this, 'save_archiving_status' ) );
         add_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
         
-        //TO FIX not sure this is unseful.  Commented.
-        //add_filter('ari_get_remote_image_url',  array( $this, 'get_url_from_special_domain' ),10, 2);
+        add_filter('ari_get_remote_image_url',  array( $this, 'get_url_from_special_domain' ));
+        add_filter('ari_get_image_attributes',array(&$this,'image_attributes_class_id'),10,2);
 
     }
 
@@ -240,10 +240,7 @@ class ArchiveRemoteImages{
             $image = array_filter($image);
             if (!array_key_exists('src', $image)) continue;
             if (self::is_local_image($image['src'])) continue; //is local image
-            
-            //filter that allows to update the file URL if needed (eg. depending of the domain)
-            $image['src'] = apply_filters('ari_get_remote_image_url',$image['src'],$image);
-            
+
             $images[] = $image;
             
         }
@@ -292,12 +289,13 @@ class ArchiveRemoteImages{
         //get images urls in post content
         $images = self::fetch_remote_images($doc);
         
-        //remove hooks (avoid infinite loops, disable revisions)
+        //hooks START (avoid infinite loops, disable revisions)
         remove_action('save_post', array( $this, 'save_archiving_status' ));
         remove_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
-        remove_action('pre_post_update', 'wp_save_post_revision');// stop revisions
+        add_filter( 'wp_revisions_to_keep',  array( $this, 'disable_post_revisions' ));
+        add_filter( 'wp_get_attachment_image_attributes',  array( $this, 'image_attributes_hook' ),10, 2);
         
-        foreach ($images as $image){
+        foreach ((array)$images as $image){
             $post->post_content = self::replace_single_image($image, $post, $doc);
             
             //update post
@@ -306,10 +304,12 @@ class ArchiveRemoteImages{
             wp_update_post( $post ); 
         }
 
-        //re-hooks
+        //hooks STOP 
         add_action('save_post', array( $this, 'save_archiving_status' ));
         add_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
         add_action('pre_post_update', 'wp_save_post_revision');//  enable revisions again
+        remove_filter( 'wp_revisions_to_keep',  array( $this, 'disable_post_revisions' ));
+        remove_filter( 'wp_get_attachment_image_attributes',  array( $this, 'image_attributes_hook' ),10, 2);
         
         
         return $post_id;
@@ -329,13 +329,13 @@ class ArchiveRemoteImages{
     }
     
     /**
-     * TO FIX check what for is this function
+     * TO FIX rename / give more informations on this function
      * @param type $url
      * @param type $image
      * @return type
      */
     
-    function get_url_from_special_domain($url,$image){
+    function get_url_from_special_domain($url){
         
         $check_domains = array(
             'blogspot.com',
@@ -374,6 +374,31 @@ class ArchiveRemoteImages{
         
     }
     
+    /*
+     * Used for disabling revisions temporary
+     */
+    function disable_post_revisions($num){
+        return 0;
+    }
+    
+    /*
+     * Runs a hook so we can filter the image attributes
+     */
+    
+    function image_attributes_hook($attr, $attachment){
+        return apply_filters('ari_get_image_attributes',$attr,$attachment);
+    }
+    
+    /*
+     * Adds the class wp-image-id 
+     * Because it's easier to read when editing the code of the post content
+     */
+
+    function image_attributes_class_id($attr, $attachment){
+        $attr['class'].= " wp-image-".$attachment->ID;
+        return $attr;
+    }
+    
     function get_image_title($image){
         $title = '';
         if (array_key_exists('title', $image)){
@@ -383,7 +408,7 @@ class ArchiveRemoteImages{
         }
         return apply_filters('ari_get_image_title',$title);
     }
-    
+
     function get_id_from_already_uploaded_source($img_url){
         $query_args = array(
             'post_type'         => 'attachment',
@@ -412,6 +437,11 @@ class ArchiveRemoteImages{
         
         $post_content = $post->post_content;
         $image_url = $image['src'];
+        
+        //filter that allows to update the file URL if needed (eg. depending of the domain)
+        //(this hook is applied several times in the code)
+        $image_url = apply_filters('ari_get_remote_image_url',$image_url); 
+            
 
         //this image url already has been uploaded
         $already_uploaded_id = self::get_id_from_already_uploaded_source($image_url);
@@ -456,52 +486,71 @@ class ArchiveRemoteImages{
             
             $new_image_html = wp_get_attachment_image( $attachment_id, $image_size );
             $new_image_html = apply_filters('ari_get_new_image_html',$new_image_html,$attachment_id);
+            
+            if ($new_image_html){
 
-            //replace image in content
-            $imageTags = $doc->getElementsByTagName('img');
+                $imageTags = $doc->getElementsByTagName('img'); //get all images
+                $new_image_el = $doc->createDocumentFragment();
+                $new_image_el->appendXML($new_image_html);
 
-            $new_image_el = $doc->createDocumentFragment();
-            $new_image_el->appendXML($new_image_html);
+                foreach ($imageTags as $imageTag){
+                    
+                    $imageTag_url = $imageTag->getAttribute('src');
+                    
+                    //filter that allows to update the file URL if needed (eg. depending of the domain)
+                    //(this hook is applied several times in the code)
+                    $imageTag_url = apply_filters('ari_get_remote_image_url',$imageTag_url); 
+                    
+                    if ($imageTag_url != $image_url) continue;
 
-            foreach ($imageTags as $imageTag){
-                $imageTag_url = $imageTag->getAttribute('src');
-                if ($imageTag_url != $image_url) continue;
 
-                $parentNode = $imageTag->parentNode;
+                    $parentNode = $imageTag->parentNode;
 
-                //replace <img> tag
-                $parentNode->replaceChild($new_image_el, $imageTag);
+                    //replace <img> tag
+                    $parentNode->replaceChild($new_image_el, $imageTag);
 
-                //if the parent tag of the image is a link to the (same) image,
-                //replace that link with a link to the uploaded image.
-                if (($parentNode->tagName == 'a') && (self::get_setting('replace_parent_link'))){
+                    //if the parent tag of the image is a link to the (same) image,
+                    //replace that link with a link to the uploaded image.
+                    if (($parentNode->tagName == 'a') && (self::get_setting('replace_parent_link'))){
 
-                    $link_src = $parentNode->getAttribute('href');
+                        $link_src = $parentNode->getAttribute('href');
+                        
+                        //filter that allows to update the file URL if needed (eg. depending of the domain)
+                        //(this hook is applied several times in the code)
+                        $link_src = apply_filters('ari_get_remote_image_url',$link_src); 
 
-                    //link url and image source are the same
-                    if ($link_src == $image_url){
+                        //link url and image source are the same
+                        if ($link_src == $image_url){
 
-                        $linked_image_url = self::get_linked_image_url($attachment_id);
+                            $linked_image_url = self::get_linked_image_url($attachment_id);
 
-                        $image_linked_size = self::get_setting('image_linked_size');
-                        $new_image_html = wp_get_attachment_image( $attachment_id, $image_linked_size );
-                        $new_link_html = '<a href="'.$linked_image_url.'">'.$new_image_html.'</a>';
-                        $new_link_html = apply_filters('ari_get_new_link_html',$new_link_html,$attachment_id);
+                            $image_linked_size = self::get_setting('image_linked_size');
 
-                        $new_link_el = $doc->createDocumentFragment();
-                        $new_link_el->appendXML($new_link_html);
+                            $new_linked_image_html = wp_get_attachment_image( $attachment_id, $image_linked_size );
+                            
+                            $new_link_html = '<a href="'.$linked_image_url.'">'.$new_linked_image_html.'</a>';
+                            $new_link_html = apply_filters('ari_get_new_link_html',$new_link_html,$attachment_id);
+                            
+                            if ($new_link_html){
+                                $new_link_el = $doc->createDocumentFragment();
+                                $new_link_el->appendXML($new_link_html);
 
-                        //replace <a> tag
-                        $parentNode->parentNode->replaceChild($new_link_el, $parentNode);
+                                //replace <a> tag
+                                $parentNode->parentNode->replaceChild($new_link_el, $parentNode);
+                            }
+
+
+
+                        }
 
                     }
 
                 }
 
+                //TO FIX : remove doctype, html and body tags.
+                $post_content =  $doc->saveHTML();
+                
             }
-
-            //TO FIX : remove doctype, html and body tags.
-            $post_content =  $doc->saveHTML();
 
         }
         

@@ -422,7 +422,7 @@ class AriSettings{
         $box.='</select> ';
         
         printf(
-            __('Embed %1$s image size','ari'),
+            __('Display %1$s image size','ari'),
             $box
         );
     }
@@ -438,7 +438,7 @@ class AriSettings{
         $box.='</select> ';
         
         printf(
-            __('Embed %1$s image size','ari'),
+            __('Display %1$s image size','ari'),
             $box
         );
     }
