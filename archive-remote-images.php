@@ -117,6 +117,9 @@ class ArchiveRemoteImages{
         //post processing
         add_action( 'save_post',  array( $this, 'save_post_metadata' ) );
         add_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
+        
+        //TO FIX not sure this is unseful.  Commented.
+        //add_filter('ari_get_remote_image_url',  array( $this, 'get_url_from_special_domain' ),10, 2);
 
     }
 
@@ -238,6 +241,9 @@ class ArchiveRemoteImages{
             if (!array_key_exists('src', $image)) continue;
             if (self::is_local_image($image['src'])) continue; //is local image
             
+            //filter that allows to update the file URL if needed (eg. depending of the domain)
+            $image['src'] = apply_filters('ari_get_remote_image_url',$image['src'],$image);
+            
             $images[] = $image;
             
         }
@@ -322,7 +328,15 @@ class ArchiveRemoteImages{
 
     }
     
-    function get_url_from_special_domain($url){
+    /**
+     * TO FIX check what for is this function
+     * @param type $url
+     * @param type $image
+     * @return type
+     */
+    
+    function get_url_from_special_domain($url,$image){
+        
         $check_domains = array(
             'blogspot.com',
             'blogger.com',
@@ -332,23 +346,27 @@ class ArchiveRemoteImages{
         );
         
         foreach ($check_domains as $check_domain){
+            
             if (strpos($url, $check_domain)){
                 
                 $response = wp_remote_request($url);
-                if (is_wp_error($response))
-                    return 'error1';
+                
+                if (!is_wp_error($response)){
+                    $my_body = wp_remote_retrieve_body($response);
 
-                $my_body = wp_remote_retrieve_body($response);
+                    if (strpos($my_body, 'src')) {
 
-                if (strpos($my_body, 'src')) {
-                    preg_match_all('|<img.*?src=[\'"](.*?)[\'"].*?>|i', $my_body, $matches);
-                    foreach ($matches[1] as $url):
-                        $spisak = $url;
-                    endforeach;
+                        preg_match_all('|<img.*?src=[\'"](.*?)[\'"].*?>|i', $my_body, $matches);
 
-                    $url = $spisak;
-                    
+                        foreach ($matches[1] as $url):
+                            $spisak = $url;
+                        endforeach;
+
+                        $url = $spisak;
+
+                    }
                 }
+
             }
         }
         
@@ -393,20 +411,16 @@ class ArchiveRemoteImages{
         global $wpdb;
         
         $post_content = $post->post_content;
-        $url = $image['src'];
+        $image_url = $image['src'];
 
         //this image url already has been uploaded
-        $already_uploaded_id = self::get_id_from_already_uploaded_source($image['src']);
+        $already_uploaded_id = self::get_id_from_already_uploaded_source($image_url);
 
         if ($already_uploaded_id){
 
             $attachment_id = $already_uploaded_id;
 
         }else{
-            //check if image is from one of those domains
-            //TO FIX what's the purpose of this ?
-
-            $url = self::get_url_from_special_domain($image['src']);
 
             //get image title
             $img_title = self::get_image_title($image);
@@ -422,17 +436,17 @@ class ArchiveRemoteImages{
             */
 
             //START HACK
-            $this->attachment_source = $url; 
+            $this->attachment_source = $image_url; 
             add_action('add_attachment',array( $this, 'uploaded_image_save_source' ));
 
-            $upload = media_sideload_image($url, $post->ID, $img_title);
+            $upload = media_sideload_image($image_url, $post->ID, $img_title);
 
             //STOP HACK
             remove_action('add_attachment',array( $this, 'uploaded_image_save_source' )); //hook
             $this->attachment_source = '';
 
             if (!is_wp_error($upload)){
-                $attachment_id = self::get_id_from_already_uploaded_source($url);
+                $attachment_id = self::get_id_from_already_uploaded_source($image_url);
             }
         }
 
@@ -451,7 +465,7 @@ class ArchiveRemoteImages{
 
             foreach ($imageTags as $imageTag){
                 $imageTag_url = $imageTag->getAttribute('src');
-                if ($imageTag_url != $url) continue;
+                if ($imageTag_url != $image_url) continue;
 
                 $parentNode = $imageTag->parentNode;
 
@@ -465,7 +479,7 @@ class ArchiveRemoteImages{
                     $link_src = $parentNode->getAttribute('href');
 
                     //link url and image source are the same
-                    if ($link_src == $url){
+                    if ($link_src == $image_url){
 
                         $linked_image_url = self::get_linked_image_url($attachment_id);
 
