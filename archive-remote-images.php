@@ -290,22 +290,20 @@ class ArchiveRemoteImages{
         $images = self::fetch_remote_images($doc);
         if (empty($images)) return $post_id;
         
-        //saving post once before disabling revisions
-        wp_update_post( $post );
-        
         //hooks START (avoid infinite loops, disable revisions)
         remove_action('save_post', array( $this, 'save_archiving_status' ));
         remove_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
+        $new_post = array('ID'=>$post_id);wp_update_post( $new_post );//saving post once before disabling revisions
         add_filter( 'wp_revisions_to_keep',  array( $this, 'disable_post_revisions' ));
         add_filter( 'wp_get_attachment_image_attributes',  array( $this, 'image_attributes_hook' ),10, 2);
         
         foreach ((array)$images as $image){
-            $post->post_content = self::replace_single_image($image, $post, $doc);
+            $new_post['post_content'] = self::replace_single_image($image, $post, $doc);
             
             //update post
             //is inside FOREACH so if the script breaks, 
             //successfully grabbed images still are replaced in the post content.
-            wp_update_post( $post ); 
+            wp_update_post( $new_post ); 
         }
 
         //hooks STOP 
@@ -470,8 +468,8 @@ class ArchiveRemoteImages{
             add_action('add_attachment',array( $this, 'uploaded_image_save_source' ));
 
             //filter that allows to update the file URL if needed (eg. depending of the domain)
-            $image_url_filtered = apply_filters('ari_get_remote_image_url',$image_url); 
-            $upload = media_sideload_image($image_url_filtered, $post->ID, $img_title);
+            $upload_url = apply_filters('ari_get_remote_image_url',$image_url); 
+            $upload = media_sideload_image($upload_url, $post->ID, $img_title);
 
             //STOP HACK
             remove_action('add_attachment',array( $this, 'uploaded_image_save_source' )); //hook
