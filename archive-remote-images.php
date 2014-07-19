@@ -288,6 +288,10 @@ class ArchiveRemoteImages{
 
         //get images urls in post content
         $images = self::fetch_remote_images($doc);
+        if (empty($images)) return $post_id;
+        
+        //saving post once before disabling revisions
+        wp_update_post( $post );
         
         //hooks START (avoid infinite loops, disable revisions)
         remove_action('save_post', array( $this, 'save_archiving_status' ));
@@ -310,7 +314,6 @@ class ArchiveRemoteImages{
         add_action('pre_post_update', 'wp_save_post_revision');//  enable revisions again
         remove_filter( 'wp_revisions_to_keep',  array( $this, 'disable_post_revisions' ));
         remove_filter( 'wp_get_attachment_image_attributes',  array( $this, 'image_attributes_hook' ),10, 2);
-        
         
         return $post_id;
     }
