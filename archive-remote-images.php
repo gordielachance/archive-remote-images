@@ -329,6 +329,17 @@ class ArchiveRemoteImages{
 
     }
     
+    /*
+     * Get domain (without subdomain like www.)
+     */
+    
+    function get_domain($url){
+        $parse = parse_url($url);
+        $host_names = explode(".", $parse['host']);
+        $domain = $host_names[count($host_names)-2] . "." . $host_names[count($host_names)-1];
+        return $domain;
+    }
+    
     /**
      * TO FIX rename / give more informations on this function
      * @param type $url
@@ -338,6 +349,8 @@ class ArchiveRemoteImages{
     
     function get_url_from_special_domain($url){
         
+        $domain = self::get_domain($url);
+
         $check_domains = array(
             'blogspot.com',
             'blogger.com',
@@ -346,30 +359,28 @@ class ArchiveRemoteImages{
             'gstatic.com'
         );
         
-        foreach ($check_domains as $check_domain){
-            
-            if (strpos($url, $check_domain)){
+        if (in_array($domain,$check_domains)){
+        
+            $response = wp_remote_request($url);
                 
-                $response = wp_remote_request($url);
-                
-                if (!is_wp_error($response)){
-                    $my_body = wp_remote_retrieve_body($response);
+            if (!is_wp_error($response)){
+                $my_body = wp_remote_retrieve_body($response);
 
-                    if (strpos($my_body, 'src')) {
+                if (strpos($my_body, 'src')) {
 
-                        preg_match_all('|<img.*?src=[\'"](.*?)[\'"].*?>|i', $my_body, $matches);
+                    preg_match_all('|<img.*?src=[\'"](.*?)[\'"].*?>|i', $my_body, $matches);
 
-                        foreach ($matches[1] as $url):
-                            $spisak = $url;
-                        endforeach;
+                    foreach ($matches[1] as $url):
+                        $spisak = $url;
+                    endforeach;
 
-                        $url = $spisak;
+                    $url = $spisak;
 
-                    }
                 }
-
             }
+            
         }
+        
         
         return $url;
         
