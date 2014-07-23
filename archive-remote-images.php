@@ -353,6 +353,35 @@ class ArchiveRemoteImages{
         return $domain;
     }
     
+    /*
+     * Gets the allowed file extensions allowed for 
+     * a specific mime ('image','video','audio',...)
+     * and an optional type ('jpeg','gif','mp4',...)
+     */
+    
+    function get_allowed_extensions($mime_check,$type_check=false){
+    	$extensions = array();
+	$allowed = get_allowed_mime_types();
+	foreach ((array)$allowed as $ext_str => $mimetype_str) {
+		$mimetype = explode('/',$mimetype_str); //eg. 'image/jpeg'
+		$mime = $mimetype[0]; //'image'
+		$type = $mimetype[1]; //'jpeg'
+		if ( $mime!=$mime_check ) continue;
+		if (isset($type_check) && ( $type_check!=$type )) continue;
+		$mimetype_ext = explode('|',$ext_str);
+		$extensions = array_merge($mimetype_ext,$extensions);
+	}
+	return $extensions;
+    }
+    
+    /*
+     * Gets the allowed file extensions allowed for images
+     */
+    
+    function get_allowed_image_extensions(){
+    	return get_allowed_extensions('image');
+    }
+    
     /**
      * TO FIX rename / give more informations on this function
      * @param type $url
