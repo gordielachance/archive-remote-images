@@ -179,6 +179,27 @@ class ArchiveRemoteImages{
         
         ?>
         <div id="post-img-select">
+                <?php
+                if ($count = self::count_archived_attachments(get_the_ID())){
+                    ?>
+                    <small>
+                    <?php
+                    printf(
+                        _n(
+                            '<strong>1</strong> media has been downloaded for this post using Archive Remote Images !',
+                            'Already <strong>%s</strong> medias have been downloaded for this post using Archive Remote Images !',
+                            $count,
+                            'ari' ),
+                        $count
+                    );
+                    ?>
+                    </small>
+                    <hr/>
+                    <?php
+                }
+                ?>
+                
+                
                 <input type="checkbox"value="on" <?php checked((bool)$checked); ?> id="ari-metabox-check" name="do_remote_archive"> <label for="ari-metabox-check"><?php _e('Download Remote Images for  this post','ari');?></label>
                 <?php wp_nonce_field($this->basename,'ari_form',false);?>
             </p>	

@@ -114,7 +114,11 @@ class AriSettings{
                 <p>
                     <?php
                     printf(
-                        __('Already <strong>%1$d</strong> medias have been downloaded using Archive Remote Images !','ari'),
+                        _n(
+                            '<strong>1</strong> media has been downloaded using Archive Remote Images !',
+                            'Already <strong>%s</strong> medias have been downloaded using Archive Remote Images !',
+                            $count,
+                            'ari' ),
                         $count
                     );
                     ?>
