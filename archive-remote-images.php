@@ -179,7 +179,7 @@ class ArchiveRemoteImages{
         
         ?>
         <div id="post-img-select">
-                <input type="checkbox"value="on" <?php checked((bool)$checked); ?> id="ari-metabox-check" name="do_remote_archive"> <label for="ari-metabox-check"><?php _e('Archive Remote Images','ari');?></label>
+                <input type="checkbox"value="on" <?php checked((bool)$checked); ?> id="ari-metabox-check" name="do_remote_archive"> <label for="ari-metabox-check"><?php _e('Download Remote Images for  this post','ari');?></label>
                 <?php wp_nonce_field($this->basename,'ari_form',false);?>
             </p>	
         </div>
@@ -630,13 +630,17 @@ class ArchiveRemoteImages{
      * @return int
      */
     
-    public function count_downloaded_attachments(){
+    public function count_archived_attachments($post_id = false){
         
         $query_args = array(
             'post_type' => 'attachment',
             'meta_key'  => '_ari-url',
             'posts_per_page' => -1
         );
+        
+        if ($post_id) 
+            $query_args['post_parent'] = $post_id;
+        
         
         $meta_posts = get_posts( $query_args );
         

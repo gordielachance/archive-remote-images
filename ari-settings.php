@@ -108,7 +108,7 @@ class AriSettings{
             <h2><?php _e('Archive Remote Images','ari');?></h2>  
             
             <?php
-            $count = ari()->count_downloaded_attachments();
+            $count = ari()->count_archived_attachments();
             if ($count){
                 ?>
                 <p>
