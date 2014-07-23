@@ -19,6 +19,7 @@ class AriSettings{
         add_action( 'admin_menu', array( $this, 'add_plugin_page' ) );
         add_action( 'admin_init', array( $this, 'page_init' ) );
         add_action( 'plugins_loaded', array($this, 'upgrade'));//install and upgrade
+        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts_styles' ) );
     }
     
     public function get_settings(){
@@ -44,6 +45,12 @@ class AriSettings{
         $settings = self::get_default_settings();
         if (!array_key_exists($name, $settings)) return false;
         return $settings[$name];
+    }
+    
+    function enqueue_scripts_styles($hook){
+        if ($hook!='settings_page_ari-admin') return;
+        wp_enqueue_script('ari-settings', ari()->plugin_url.'_inc/js/settings.js', array('jquery'),ari()->version);
+        
     }
     
     public function allowed_post_types(){
