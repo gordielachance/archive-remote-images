@@ -4,7 +4,7 @@
  * Plugin URI: https://wordpress.org/plugins/archive-remote-images
  * Description: Archive Remote Images allows you to scan a post to fetch remote images; then updates its content automatically.
  * Author: Kason Zhao, G.Breant
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author URI: https://profiles.wordpress.org/kasonzhao/
  * License: GPL2+
  * Text Domain: ari
@@ -18,7 +18,7 @@ class ArchiveRemoteImages{
     /**
      * @public string plugin version
      */
-    public $version = '1.04';
+    public $version = '1.05';
     
 
     /** Paths *****************************************************************/
@@ -362,6 +362,18 @@ class ArchiveRemoteImages{
         return false;
     }
     
+    function is_local_server($url){
+        
+        if ($_SERVER['REMOTE_ADDR']=='127.0.0.1') return true;
+        
+        $parse = parse_url($url);
+        $host_names = explode(".", $parse['host']);
+        
+        if (!isset($host_names[1])) return true; //no extension, we should be on a local server (like localhost)
+        
+        return false;
+    }
+    
     /*
      * Get domain (without subdomain like www.)
      */
@@ -369,8 +381,15 @@ class ArchiveRemoteImages{
     function get_domain($url){
         if (!self::is_absolute_url($url)) return false;
         $parse = parse_url($url);
+
         $host_names = explode(".", $parse['host']);
-        $domain = $host_names[count($host_names)-2] . "." . $host_names[count($host_names)-1];
+
+        if (self::is_local_server($url)){
+            $domain = $parse['host'];
+        }else{
+            $domain = $host_names[count($host_names)-2] . "." . $host_names[count($host_names)-1];
+        }
+
         return $domain;
     }
     

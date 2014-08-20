@@ -4,7 +4,7 @@ Donate link:
 Tags: Archive Remote Images, image archive, grab images, cache Images, auto-save images, media
 Requires at least: 3.0
 Tested up to: 4.0
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,8 +50,9 @@ A: Yes, there is several hooks you can use.  Search in the code for "apply_filte
 2. Settings page
 
 == Changelog ==
-
-=  1.0.4 =
+= 1.0.5 =
+* added function is_local_server() to avoid error in get_domain() when used on localhost.
+= 1.0.4 =
 * Lot of new options in the settings page.
 * Localization.
 * Also handles the link wrapped around an image, if the link target is pointing to the image file.
