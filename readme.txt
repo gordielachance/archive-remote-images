@@ -1,10 +1,10 @@
 === Archive Remote Images ===
-Contributors: Kasonzhao, grosbouff
+Contributors: Kasonzhao, grosbouff, kraoc
 Donate link: 
 Tags: Archive Remote Images, image archive, grab images, cache Images, auto-save images, media
 Requires at least: 3.0
 Tested up to: 4.0
-Stable tag: 1.0.5
+Stable tag: 1.0.7
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,6 +50,12 @@ A: Yes, there is several hooks you can use.  Search in the code for "apply_filte
 2. Settings page
 
 == Changelog ==
+= 1.0.7 (by Kraoc) =
+* Deep clean html content on post load
+* Add normalize on document save
+= 1.0.6 (by Kraoc) =
+* Add default encoding when loading DOM
+* removed doctype / html / body from document (only since PHP 5.4).
 = 1.0.5 =
 * added function is_local_server() to avoid error in get_domain() when used on localhost.
 = 1.0.4 =
