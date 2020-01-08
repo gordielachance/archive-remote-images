@@ -53,20 +53,21 @@ class AriSettings{
         
     }
     
-    public function allowed_post_types(){
-        $post_types = get_post_types();
+    public function get_allowed_post_types(){
+        
+        $args = array(
+           'public'   => true
+        );
+        
+        $post_types = get_post_types($args);
+        
         $disabled = apply_filters('ari_option_post_type_disabled',array(
-            'attachment',
-            'revision',
-            'nav_menu_item'
+            'attachment'
             )
         );
-        $allowed = array();
-        foreach ((array)$post_types as $post_type){
-            if (in_array($post_type,$disabled)) continue;
-            $allowed[] = $post_type;
-        }
-        return $allowed;
+        $post_types = array_diff($post_types,$disabled);
+        
+        return $post_types;
     }
     
     function upgrade(){
@@ -111,7 +112,6 @@ class AriSettings{
         
         ?>
         <div class="wrap">
-            <?php screen_icon(); ?>
             <h2><?php _e('Archive Remote Images','ari');?></h2>  
             
             <?php
@@ -269,7 +269,7 @@ class AriSettings{
         }else{
             
             //post types
-            $post_types = self::allowed_post_types();
+            $post_types = self::get_allowed_post_types();
             if( isset( $input['post_types'] ) ){
                 $new_input['ignored_post_type'] = array();
                 foreach ((array)$post_types as $post_type){
@@ -370,7 +370,7 @@ class AriSettings{
     public function post_type_callback(){
 
         $ignored = (array)ari()->get_setting('ignored_post_type');
-        $post_types = self::allowed_post_types();
+        $post_types = self::get_allowed_post_types();
 
         foreach ((array)$post_types as $slug){
 

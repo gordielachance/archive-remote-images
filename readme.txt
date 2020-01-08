@@ -1,10 +1,10 @@
 === Archive Remote Images ===
 Contributors: Kasonzhao, grosbouff, kraoc
-Donate link: 
+Donate link: http://bit.ly/gbreant
 Tags: Archive Remote Images, image archive, grab images, cache Images, auto-save images, media
 Requires at least: 3.0
-Tested up to: 4.0
-Stable tag: 1.0.7
+Tested up to: 5.3.2
+Stable tag: trunk
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,6 +50,12 @@ A: Yes, there is several hooks you can use.  Search in the code for "apply_filte
 2. Settings page
 
 == Changelog ==
+= 1.0.8 =
+* WP upgrade fixes
+* debug function
+* minor improvements
+* code cleanup
+
 = 1.0.7 (by Kraoc) =
 * Deep clean html content on post load
 * Add normalize on document save

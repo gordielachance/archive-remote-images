@@ -4,8 +4,8 @@
  * Plugin URI: https://wordpress.org/plugins/archive-remote-images
  * Description: Archive Remote Images allows you to scan a post to fetch remote images; then updates its content automatically.
  * Author: Kason Zhao, G.Breant, kraoc
- * Version: 1.0.7
- * Author URI: https://profiles.wordpress.org/kasonzhao/
+ * Version: 1.0.8
+ * Author URI: https://profiles.wordpress.org/grosbouff/
  * License: GPL2+
  * Text Domain: ari
  * Domain Path: /languages/
@@ -18,7 +18,7 @@ class ArchiveRemoteImages{
     /**
      * @public string plugin version
      */
-    public $version = '1.07';
+    public $version = '1.0.8';
     
 
     /** Paths *****************************************************************/
@@ -153,7 +153,7 @@ class ArchiveRemoteImages{
         if (!current_user_can('edit_post', get_the_ID())) return false;
         if (!current_user_can('upload_files', get_the_ID())) return false;
         
-        $post_types = $this->options_class->allowed_post_types();
+        $post_types = $this->options_class->get_allowed_post_types();
         $ignored = self::get_setting('ignored_post_type');
 
         foreach ($post_types as $post_type){
@@ -169,11 +169,9 @@ class ArchiveRemoteImages{
         
         if (self::get_setting('remember_status')){
             if ($meta_value = get_post_meta($post->ID, 'ari_enabled', TRUE)){
-                if ($meta_value == 'yes'){
-                    $checked = true;
-                }else{
-                    $checked = false;
-                }
+                
+                $checked = ($meta_value == 'yes');
+                
             }
         }
         
@@ -200,7 +198,7 @@ class ArchiveRemoteImages{
                 ?>
                 
                 
-                <input type="checkbox"value="on" <?php checked((bool)$checked); ?> id="ari-metabox-check" name="do_remote_archive"> <label for="ari-metabox-check"><?php _e('Download Remote Images for  this post','ari');?></label>
+                <input type="checkbox"value="on" <?php checked((bool)$checked); ?> id="ari-metabox-check" name="do_remote_archive"> <label for="ari-metabox-check"><?php _e('Download images locally','ari');?></label>
                 <?php wp_nonce_field($this->basename,'ari_form',false);?>
             </p>	
         </div>
@@ -224,14 +222,11 @@ class ArchiveRemoteImages{
             if (!current_user_can('upload_files', $post_id)) return $post_id;
             
             // OK, we're authenticated: we need to find and save the data 
-            $checked = "no";
-            if (isset($_POST['do_remote_archive'])){
-                $checked = "yes";
-            }
+            $checked = isset($_POST['do_remote_archive']) ? 'yes' : 'no';
+        
+            ArchiveRemoteImages::debug_log(array('post_id'=>$post_id,'checked'=>$checked),"save post archiving status");
             
-            update_post_meta($post_id, 'ari_enabled', $checked);
-
-            return $post_id;
+            return update_post_meta($post_id, 'ari_enabled', $checked);
 
     }
     
@@ -297,6 +292,8 @@ class ArchiveRemoteImages{
         if ($time_limit = self::get_setting('time_limit')){
             set_time_limit($time_limit);
         }
+        
+        $new_post = clone $post;
 
         //DOMDocument
         libxml_use_internal_errors(true); //avoid errors like duplicate IDs
@@ -306,26 +303,39 @@ class ArchiveRemoteImages{
         $doc->recover = true; 
         //$doc->strictErrorChecking = false;
         
-        $doc->loadHTML($post->post_content, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NOBLANKS | LIBXML_NOCDATA | LIBXML_NOXMLDECL | LIBXML_NSCLEAN);
-
+        $html = mb_convert_encoding( $post->post_content, 'HTML-ENTITIES', 'UTF-8'); //https://stackoverflow.com/a/8218649
+        $doc->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NOBLANKS | LIBXML_NOCDATA | LIBXML_NOXMLDECL | LIBXML_NSCLEAN);
+        $doc->normalizeDocument();
+        
         //get images urls in post content
         $images = self::fetch_remote_images($doc);
         if (empty($images)) return $post_id;
         
+        ArchiveRemoteImages::debug_log(array('post_id'=>$post_id,'count'=>count($images)),"found images");
+        
         //hooks START (avoid infinite loops, disable revisions)
-        remove_action('save_post', array( $this, 'save_archiving_status' ));
+        remove_action( 'save_post', array( $this, 'save_archiving_status' ) );
         remove_action( 'save_post',  array( $this, 'save_post_images' ),10, 2);
-        $new_post = array('ID'=>$post_id);wp_update_post( $new_post );//saving post once before disabling revisions
+        
         add_filter( 'wp_revisions_to_keep',  array( $this, 'disable_post_revisions' ));
         add_filter( 'wp_get_attachment_image_attributes',  array( $this, 'image_attributes_hook' ),10, 2);
         
         foreach ((array)$images as $image){
-            $new_post['post_content'] = self::replace_single_image($image, $post, $doc);
+            
+            $replaced = self::replace_single_image($doc,$image);
+            if ( !$replaced || is_wp_error($replaced) ) continue;
             
             //update post
             //is inside FOREACH so if the script breaks, 
             //successfully grabbed images still are replaced in the post content.
-            wp_update_post( $new_post ); 
+            
+            $new_post->post_content = $doc->saveHTML();
+
+            if ( $new_post->post_content === $post->post_content ) continue;
+            
+            $success = wp_update_post( $new_post );
+            ArchiveRemoteImages::debug_log($post_id,"saved post");
+
         }
 
         //hooks STOP 
@@ -503,7 +513,7 @@ class ArchiveRemoteImages{
         return apply_filters('ari_get_image_title',$title);
     }
 
-    function get_existing_attachment_id($img_url){
+    private function get_media_by_remote_url($img_url){
         $query_args = array(
             'post_type'         => 'attachment',
             'post_status'       => 'inherit',
@@ -521,124 +531,138 @@ class ArchiveRemoteImages{
         if (!$query->have_posts()) return false;
         
         $id = $query->posts[0]->ID;
-        return apply_filters("ari_get_existing_attachment_id",$id,$img_url);
+        return apply_filters("ari_get_media_by_remote_url",$id,$img_url);
+    }
+    
+    private function create_local_image($image){
+        
+        $image_url = $image['src'];
+        
+        if ( $attachment_id = self::get_media_by_remote_url($image_url) ){ //this image url already has been uploaded
+            
+            ArchiveRemoteImages::debug_log($attachment_id,"image already exists as attachment");
+            return $attachment_id;
+            
+        }
+
+        //get image title
+        $img_title = self::get_image_title($image);
+
+        /*
+        media_sideload_image() do not returns the attachment ID.
+        hook and unhook a function to get over that.
+        it that function, we will save the source URL as post meta for the attachment.
+        The value will be $this->attachment_source, which is only used here.
+        This is kind of a hack, hope that media_sideload_image() will be able to return
+        The attachment ID in the future.
+        https:core.trac.wordpress.org/ticket/19629
+        */
+
+        //START HACK
+        $this->attachment_source = $image_url; 
+        add_action('add_attachment',array( $this, 'uploaded_image_save_source' ));
+
+        //filter that allows to update the file URL if needed (eg. depending of the domain)
+        $upload_url = apply_filters('ari_get_remote_image_url',$image_url); 
+        $attachment_id = media_sideload_image($upload_url, $post->ID, $img_title,'id');
+
+        //STOP HACK
+        remove_action('add_attachment',array( $this, 'uploaded_image_save_source' )); //hook
+        $this->attachment_source = '';
+
+        if (is_wp_error($attachment_id)){
+            ArchiveRemoteImages::debug_log($attachment_id->get_error_message(),"error downloading image");
+            return $attachment_id;
+
+        }
+
+        ArchiveRemoteImages::debug_log($attachment_id,"created attachment");
+   
     }
 
     
     /**
      * Archive image from content
      */
-    function replace_single_image($image, $post, $doc){
+    function replace_single_image(&$doc,$image){
         global $wpdb;
         
-        $post_content = $post->post_content;
+        $attachment_id = null;
         $image_url = $image['src'];
-
-        //this image url already has been uploaded
-        $already_uploaded_id = self::get_existing_attachment_id($image_url);
-
-        if ($already_uploaded_id){
-
-            $attachment_id = $already_uploaded_id;
-
-        }else{
-
-            //get image title
-            $img_title = self::get_image_title($image);
-
-            /*
-            media_sideload_image() do not returns the attachment ID.
-            hook and unhook a function to get over that.
-            it that function, we will save the source URL as post meta for the attachment.
-            The value will be $this->attachment_source, which is only used here.
-            This is kind of a hack, hope that media_sideload_image() will be able to return
-            The attachment ID in the future.
-            https:core.trac.wordpress.org/ticket/19629
-            */
-
-            //START HACK
-            $this->attachment_source = $image_url; 
-            add_action('add_attachment',array( $this, 'uploaded_image_save_source' ));
-
-            //filter that allows to update the file URL if needed (eg. depending of the domain)
-            $upload_url = apply_filters('ari_get_remote_image_url',$image_url); 
-            $upload = media_sideload_image($upload_url, $post->ID, $img_title);
-
-            //STOP HACK
-            remove_action('add_attachment',array( $this, 'uploaded_image_save_source' )); //hook
-            $this->attachment_source = '';
-
-            if (!is_wp_error($upload)){
-                $attachment_id = self::get_existing_attachment_id($image_url);
-            }
+        $image_size = self::get_setting('image_size');
+        $replacements = 0;
+        
+        $attachment_id = $this->create_local_image($image);
+        if ( is_wp_error($attachment_id)  ) return $attachment_id;
+        
+        if ( !$attachment_id ){
+            ArchiveRemoteImages::debug_log($image_url,"missing media ID");
+            return new WP_Error( 'no_media_id','Missing media ID' );
         }
 
-        if (isset($attachment_id)){
-            
-            $image_size = self::get_setting('image_size');
-            
-            $new_image_html = wp_get_attachment_image( $attachment_id, $image_size );
-            $new_image_html = apply_filters('ari_get_new_image_html',$new_image_html,$attachment_id);
-            
-            if ($new_image_html){
+        $new_image_html = wp_get_attachment_image( $attachment_id, $image_size );
+        $new_image_html = apply_filters('ari_get_new_image_html',$new_image_html,$attachment_id);
 
-                $imageTags = $doc->getElementsByTagName('img'); //get all images
-                $new_image_el = $doc->createDocumentFragment();
-                $new_image_el->appendXML($new_image_html);
+        if ( is_wp_error($new_image_html) || !$new_image_html ){
+            ArchiveRemoteImages::debug_log($new_image_html,"invalid image HTML");
+            return $new_image_html;
+        }
 
-                foreach ($imageTags as $imageTag){
-                    
-                    $imageTag_url = $imageTag->getAttribute('src');
-                    if ($imageTag_url != $image_url) continue;
+        $imageTags = $doc->getElementsByTagName('img'); //get all images
+        $new_image_el = $doc->createDocumentFragment();
+        $new_image_el->appendXML($new_image_html);
 
+        foreach ($imageTags as $imageTag){
 
-                    $parentNode = $imageTag->parentNode;
+            $imageTag_url = $imageTag->getAttribute('src');
+            if ($imageTag_url != $image_url) continue;
 
-                    //replace <img> tag
-                    $parentNode->replaceChild($new_image_el, $imageTag);
+            $parentNode = $imageTag->parentNode;
 
-                    //if the parent tag of the image is a link to the (same) image,
-                    //replace that link with a link to the uploaded image.
-                    if (($parentNode->tagName == 'a') && (self::get_setting('replace_parent_link'))){
+            //replace <img> tag
+            if ( $parentNode->replaceChild($new_image_el, $imageTag) ){
+                $replacements++;
+            }
 
-                        $link_src = $parentNode->getAttribute('href');
+            //if the parent tag of the image is a link to the (same) image,
+            //replace that link with a link to the uploaded image.
+            if (($parentNode->tagName == 'a') && (self::get_setting('replace_parent_link'))){
 
-                        //link url and image source are the same
-                        if ( $link_src == $image_url ){
+                $link_src = $parentNode->getAttribute('href');
 
-                            $linked_image_url = self::get_linked_image_url($attachment_id);
+                //link url and image source are the same
+                if ( $link_src == $image_url ){
 
-                            $image_linked_size = self::get_setting('image_linked_size');
+                    $linked_image_url = self::get_linked_image_url($attachment_id);
 
-                            $new_linked_image_html = wp_get_attachment_image( $attachment_id, $image_linked_size );
-                            
-                            $new_link_html = '<a href="'.$linked_image_url.'">'.$new_linked_image_html.'</a>';
-                            $new_link_html = apply_filters('ari_get_new_link_html',$new_link_html,$attachment_id);
-                            
-                            if ($new_link_html){
-                                $new_link_el = $doc->createDocumentFragment();
-                                $new_link_el->appendXML($new_link_html);
+                    $image_linked_size = self::get_setting('image_linked_size');
 
-                                //replace <a> tag
-                                $parentNode->parentNode->replaceChild($new_link_el, $parentNode);
-                            }
+                    $new_linked_image_html = wp_get_attachment_image( $attachment_id, $image_linked_size );
 
+                    $new_link_html = '<a href="'.$linked_image_url.'">'.$new_linked_image_html.'</a>';
+                    $new_link_html = apply_filters('ari_get_new_link_html',$new_link_html,$attachment_id);
 
+                    if ($new_link_html){
+                        $new_link_el = $doc->createDocumentFragment();
+                        $new_link_el->appendXML($new_link_html);
 
+                        //replace <a> tag
+                        if ( $parentNode->parentNode->replaceChild($new_link_el, $parentNode) ){
+                            $replacements++;
                         }
-
                     }
 
                 }
 
-                $doc->normalizeDocument();
-                $post_content =  $doc->saveHTML();
-                
             }
 
         }
         
-        return $post_content;
+        if ($replacements){
+             ArchiveRemoteImages::debug_log(array('url'=>$image_url,'occurences'=>$replacements),"successfully replaced HTML for image");
+        }
+        
+        return (bool)$replacements;
     }
     
     function get_linked_image_url($attachment_id){
@@ -687,6 +711,16 @@ class ArchiveRemoteImages{
         $meta_post_count = count( $meta_posts );
         unset( $meta_posts);
         return (int)$meta_post_count;
+    }
+    
+    public static function debug_log($data,$title = null) {
+        if (WP_DEBUG_LOG !== true) return false;
+        $prefix = '[ari] ';
+        if($title) $prefix.=$title.': ';
+        if (is_array($data) || is_object($data)) {
+            $data = "\n" . json_encode($data,JSON_UNESCAPED_UNICODE);
+        }
+        error_log($prefix . $data);
     }
 
 }
